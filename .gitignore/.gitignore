@@ -1,0 +1,8 @@
+*.bak
+*.DS_Store
+*.idea/*
+*.log
+*.orig
+*Thumbs.db
+composer.lock
+vendor/
