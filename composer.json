@@ -13,7 +13,8 @@
     "craftcms/cms": "^3.1.5",
     "craftcms/commerce": "^2.0|^3.0",
     "craftcms/commerce-omnipay": "2.1.0.1",
-    "blasttech/omnipay-square": "^1.2"
+    "blasttech/omnipay-square": "^1.2",
+    "square/connect": "^2.20191120"
   },
   "autoload": {
     "psr-4": {

@@ -1,0 +1,43 @@
+{% from "_includes/forms" import textField, lightswitchField, selectField, autosuggestField %}
+
+<a href="https://developer.squareup.com/apps" class="btn" target="_blank">
+  Manage Square Applications
+</a>
+
+{{ autosuggestField({
+  label: 'App ID'|t('commerce'),
+  id: 'appId',
+  class: 'ltr',
+  name: 'appId',
+  suggestEnvVars: true,
+  value: gateway.appId,
+  errors: gateway.getErrors('appId')
+}) }}
+
+{{ autosuggestField({
+  label: 'Access Token'|t('commerce'),
+  id: 'accessToken',
+  class: 'ltr',
+  name: 'accessToken',
+  suggestEnvVars: true,
+  value: gateway.accessToken,
+  errors: gateway.getErrors('accessToken')
+}) }}
+
+{{ autosuggestField({
+  label: 'Location ID'|t('square'),
+  instructions: 'Identifies the location of the merchant that is taking the payment. Obtained from the Square Application Dashboard - Locations tab.'|t('square'),
+  id: 'locationId',
+  class: 'ltr',
+  name: 'locationId',
+  suggestEnvVars: true,
+  value: gateway.locationId,
+  errors: gateway.getErrors('locationId')
+}) }}
+
+{{ lightswitchField({
+  label: "Test mode?"|t('commerce'),
+  name: 'testMode',
+  on: gateway.testMode,
+  errors: gateway.getErrors('testMode'),
+}) }}
