@@ -2,11 +2,11 @@
 
 namespace craft\commerce\square\services;
 
-use \craft\commerce\square\records\Customer as CustomerRecord;
 use craft\base\Component;
 use craft\commerce\square\errors\CustomerException;
 use craft\commerce\square\gateways\Gateway;
 use craft\commerce\square\models\Customer;
+use craft\commerce\square\records\Customer as CustomerRecord;
 use craft\db\Query;
 use craft\elements\User;
 
@@ -26,7 +26,7 @@ class Customers extends Component
      */
     public function getCustomer(Gateway $gateway, User $user): Customer
     {
-        $record = CustomerRecord::find()
+        $record = $this->getCustomerQuery()
             ->where([
                 'gatewayId' => $gateway->id,
                 'userId' => $user->id,
@@ -54,7 +54,11 @@ class Customers extends Component
      */
     public function getCustomerById(int $id): Customer
     {
-        $record = CustomerRecord::findOne($id);
+        $record = $this->getCustomerQuery()
+            ->where([
+                'id' => $id,
+            ])
+            ->one();
 
         if ($record) {
             return new Customer($record);
@@ -70,7 +74,7 @@ class Customers extends Component
      */
     public function getCustomerByReference(string $reference): Customer
     {
-        $record = CustomerRecord::find()
+        $record = $this->getCustomerQuery()
             ->where([
                 'reference' => $reference,
             ])
@@ -96,7 +100,7 @@ class Customers extends Component
 
             if (!$record) {
                 throw new CustomerException('No customer exists with the ID “{id}”', [
-                   'id' => $customer->id,
+                    'id' => $customer->id,
                 ]);
             }
         } else {
@@ -139,6 +143,9 @@ class Customers extends Component
         return false;
     }
 
+    /**
+     * @return \craft\db\Query
+     */
     protected function getCustomerQuery(): Query
     {
         return (new Query())
