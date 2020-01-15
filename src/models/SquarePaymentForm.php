@@ -14,5 +14,15 @@ class SquarePaymentForm extends BasePaymentForm
     /**
      * @var string
      */
-    public $token;
+    public $cardholderName;
+
+    /**
+     * @var string
+     */
+    public $cardNonce;
+
+    /**
+     * @var string
+     */
+    public $verificationToken;
 }

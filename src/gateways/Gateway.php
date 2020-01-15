@@ -3,17 +3,22 @@
 namespace craft\commerce\square\gateways;
 
 use Craft;
-use craft\commerce\elements\Order;
 use craft\commerce\models\Address;
+use SquareConnect\Model\Address as SquareAddress;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
 use craft\commerce\omnipay\base\CreditCardGateway;
-use craft\commerce\Plugin as Commerce;
+use craft\commerce\square\errors\CustomerException;
+use craft\commerce\square\models\Customer;
 use craft\commerce\square\models\SquarePaymentForm;
+use craft\commerce\square\Plugin;
 use craft\commerce\square\web\assets\PaymentFormAsset;
+use craft\elements\User;
 use craft\web\View;
+use Exception;
 use Omnipay\Common\AbstractGateway;
-use Omnipay\Common\CreditCard;
+use Omnipay\Common\Message\RequestInterface;
+use Omnipay\Common\Message\ResponseInterface;
 
 /**
  * Class SquareCommerceGateway
@@ -82,7 +87,7 @@ class Gateway extends CreditCardGateway
         $gateway->setAppId(Craft::parseEnv($this->appId));
         $gateway->setAccessToken(Craft::parseEnv($this->accessToken));
         $gateway->setLocationId(Craft::parseEnv($this->locationId));
-        $gateway->setTestMode($this->testMode);
+        $gateway->setTestMode((bool) $this->testMode);
 
         return $gateway;
     }
@@ -142,32 +147,127 @@ class Gateway extends CreditCardGateway
     }
 
     /**
+     * @param \craft\elements\User $user
+     *
+     * @return \craft\commerce\square\models\Customer
+     */
+    public function createCustomer(User $user): Customer
+    {
+        /** @var \craft\commerce\square\gateways\OmnipayGateway $gateway */
+        $gateway = $this->gateway();
+
+        $commerceCustomer = \craft\commerce\Plugin::getInstance()->getCustomers()->getCustomerByUserId($user->id);
+
+        /** @var \Omnipay\Square\Message\CreateCustomerRequest $request */
+        $request = $gateway->createCustomer();
+        $request->setFirstName($user->firstName);
+        $request->setLastName($user->lastName);
+        $request->setEmail($user->email);
+        $request->setReferenceId($user->id);
+
+        $address = $this->getSquareAddress($commerceCustomer->primaryBillingAddress);
+        $request->setAddress($address);
+
+        /** @var \Omnipay\Square\Message\CustomerResponse $response */
+        $response = $this->sendRequest($request);
+
+        return new Customer([
+            'userId' => $user->id,
+            'gatewayId' => $this->id,
+            'reference' => $response->getCustomerReference(),
+            'response' => $response->getData(),
+        ]);
+    }
+
+    /**
      * @param \craft\commerce\models\payments\BasePaymentForm $sourceData
      * @param int                                             $userId
      *
      * @return \craft\commerce\models\PaymentSource
      * @throws \craft\commerce\errors\PaymentException
+     * @throws \craft\commerce\square\errors\CustomerException
      */
     public function createPaymentSource(BasePaymentForm $sourceData, int $userId): PaymentSource
     {
+        /** @var SquarePaymentForm $paymentForm */
+        $paymentForm = $sourceData;
+
         /** @var \craft\commerce\square\gateways\OmnipayGateway $gateway */
         $gateway = $this->gateway();
 
+        $user = Craft::$app->getUsers()->getUserById($userId);
+        $customer = Plugin::getInstance()->customers->getCustomer($this, $user);
+
         $createCardRequest = $gateway->createCard([
-            'card' => $sourceData->token,
-            'customerReference' => 'GMCCQCDG1X1DB2N6V5AAAKJ61G',
+            'card' => $paymentForm->cardNonce,
+            'cardholderName' => $paymentForm->cardholderName,
+            'customerReference' => $customer->reference,
         ]);
 
+        /** @var \Omnipay\Square\Message\CardResponse $response */
         $response = $this->sendRequest($createCardRequest);
-
-        dd($response, $response->getData());
 
         return new PaymentSource([
             'userId' => $userId,
             'gatewayId' => $this->id,
             'token' => $this->extractCardReference($response),
             'response' => $response->getData(),
-            'description' => $this->extractPaymentSourceDescription($response)
+            'description' => $this->extractPaymentSourceDescription($response),
         ]);
+    }
+
+    /**
+     * @param \Omnipay\Common\Message\ResponseInterface $response
+     *
+     * @return string
+     * @throws \craft\commerce\errors\PaymentException
+     */
+    protected function extractCardReference(ResponseInterface $response): string
+    {
+        if ($cardReference = parent::extractCardReference($response)) {
+            return $cardReference;
+        }
+
+        /** @var \SquareConnect\Model\Card $card */
+        $card = $response->getData()->getCard();
+
+        return (string) $card->getId();
+    }
+
+    /**
+     * @param \Omnipay\Common\Message\ResponseInterface $response
+     *
+     * @return string
+     */
+    protected function extractPaymentSourceDescription(ResponseInterface $response): string
+    {
+        /** @var \SquareConnect\Model\Card $card */
+        $card = $response->getData()->getCard();
+
+        return Craft::t('commerce-square', '{cardType} ending in ••••{last4}', [
+            'cardType' => $card->getCardBrand(),
+            'last4' => $card->getLast4(),
+        ]);
+    }
+
+    /**
+     * @param \craft\commerce\models\Address $address
+     *
+     * @return \SquareConnect\Model\Address
+     */
+    protected function getSquareAddress(Address $address):SquareAddress
+    {
+        $squareAddress = new SquareAddress();
+        $squareAddress->setFirstName($address->firstName);
+        $squareAddress->setLastName($address->lastName);
+        $squareAddress->setAddressLine1($address->address1);
+        $squareAddress->setAddressLine2($address->address2);
+        $squareAddress->setAddressLine3($address->address3);
+        $squareAddress->setLocality($address->city);
+        $squareAddress->setAdministrativeDistrictLevel1($address->stateName);
+        $squareAddress->setPostalCode($address->zipCode);
+        $squareAddress->setCountry($address->getCountry()->iso);
+
+        return $squareAddress;
     }
 }
