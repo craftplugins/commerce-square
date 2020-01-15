@@ -1,9 +1,9 @@
 <?php
 
-
 namespace craft\commerce\square\models;
 
-use craft\base\Model;
+use craft\commerce\base\Model;
+use craft\commerce\square\records\Customer as CustomerRecord;
 
 /**
  * Class Customer
@@ -43,5 +43,16 @@ class Customer extends Model
     public function __toString()
     {
         return $this->reference;
+    }
+
+    /**
+     * @inheritdoc
+     */
+    public function rules()
+    {
+        return [
+            [['reference'], 'unique', 'targetAttribute' => ['gatewayId', 'reference'], 'targetClass' => CustomerRecord::class],
+            [['gatewayId', 'userId', 'reference', 'response'], 'required'],
+        ];
     }
 }
