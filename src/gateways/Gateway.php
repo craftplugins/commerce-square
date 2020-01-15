@@ -3,6 +3,7 @@
 namespace craft\commerce\square\gateways;
 
 use Craft;
+use craft\commerce\errors\PaymentException;
 use craft\commerce\models\Address;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
@@ -221,14 +222,14 @@ class Gateway extends CreditCardGateway
      */
     protected function extractCardReference(ResponseInterface $response): string
     {
-        if ($cardReference = parent::extractCardReference($response)) {
-            return $cardReference;
+        if (!$response->isSuccessful()) {
+            throw new PaymentException(
+                $response->getErrorDetail(),
+                $response->getErrorCode()
+            );
         }
 
-        /** @var \SquareConnect\Model\Card $card */
-        $card = $response->getData()->getCard();
-
-        return (string) $card->getId();
+        return (string) $response->getCardReference();
     }
 
     /**
@@ -239,7 +240,7 @@ class Gateway extends CreditCardGateway
     protected function extractPaymentSourceDescription(ResponseInterface $response): string
     {
         /** @var \SquareConnect\Model\Card $card */
-        $card = $response->getData()->getCard();
+        $card = $response->getCard();
 
         return Craft::t('commerce-square', '{cardType} ending in ••••{last4}', [
             'cardType' => $card->getCardBrand(),
