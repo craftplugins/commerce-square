@@ -4,21 +4,18 @@ namespace craft\commerce\square\gateways;
 
 use Craft;
 use craft\commerce\models\Address;
-use SquareConnect\Model\Address as SquareAddress;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
 use craft\commerce\omnipay\base\CreditCardGateway;
-use craft\commerce\square\errors\CustomerException;
 use craft\commerce\square\models\Customer;
 use craft\commerce\square\models\SquarePaymentForm;
 use craft\commerce\square\Plugin;
 use craft\commerce\square\web\assets\PaymentFormAsset;
 use craft\elements\User;
 use craft\web\View;
-use Exception;
 use Omnipay\Common\AbstractGateway;
-use Omnipay\Common\Message\RequestInterface;
 use Omnipay\Common\Message\ResponseInterface;
+use SquareConnect\Model\Address as SquareAddress;
 
 /**
  * Class SquareCommerceGateway
@@ -255,7 +252,7 @@ class Gateway extends CreditCardGateway
      *
      * @return \SquareConnect\Model\Address
      */
-    protected function getSquareAddress(Address $address):SquareAddress
+    protected function getSquareAddress(Address $address): SquareAddress
     {
         $squareAddress = new SquareAddress();
         $squareAddress->setFirstName($address->firstName);
