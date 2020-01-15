@@ -58,7 +58,7 @@ function initSquare() {
 
             verificationTokenEl.value = verificationResult.token
 
-            // formElement.submit()
+            formElement.submit()
           },
         )
       },
