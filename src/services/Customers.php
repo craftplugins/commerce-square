@@ -3,9 +3,10 @@
 namespace craft\commerce\square\services;
 
 use craft\base\Component;
+use craft\commerce\Plugin as Commerce;
 use craft\commerce\square\errors\CustomerException;
 use craft\commerce\square\gateways\Gateway;
-use craft\commerce\square\models\Customer;
+use craft\commerce\square\models\SquareCustomer;
 use craft\commerce\square\records\Customer as CustomerRecord;
 use craft\db\Query;
 use craft\elements\User;
@@ -21,10 +22,10 @@ class Customers extends Component
      * @param \craft\commerce\square\gateways\Gateway $gateway
      * @param \craft\elements\User                    $user
      *
-     * @return \craft\commerce\square\models\Customer
+     * @return \craft\commerce\square\models\SquareCustomer
      * @throws \craft\commerce\square\errors\CustomerException
      */
-    public function getCustomer(Gateway $gateway, User $user): Customer
+    public function getCustomer(Gateway $gateway, User $user): SquareCustomer
     {
         $record = $this->getCustomerQuery()
             ->where([
@@ -33,8 +34,8 @@ class Customers extends Component
             ])
             ->one();
 
-        if ($record) {
-            return new Customer($record);
+        if ($record !== null) {
+            return new SquareCustomer($record);
         }
 
         $customer = $gateway->createCustomer($user);
@@ -50,9 +51,9 @@ class Customers extends Component
     /**
      * @param int $id
      *
-     * @return \craft\commerce\square\models\Customer
+     * @return \craft\commerce\square\models\SquareCustomer
      */
-    public function getCustomerById(int $id): Customer
+    public function getCustomerById(int $id): SquareCustomer
     {
         $record = $this->getCustomerQuery()
             ->where([
@@ -61,7 +62,7 @@ class Customers extends Component
             ->one();
 
         if ($record) {
-            return new Customer($record);
+            return new SquareCustomer($record);
         }
 
         return null;
@@ -70,9 +71,9 @@ class Customers extends Component
     /**
      * @param string $reference
      *
-     * @return \craft\commerce\square\models\Customer
+     * @return \craft\commerce\square\models\SquareCustomer
      */
-    public function getCustomerByReference(string $reference): Customer
+    public function getCustomerByReference(string $reference): SquareCustomer
     {
         $record = $this->getCustomerQuery()
             ->where([
@@ -81,19 +82,19 @@ class Customers extends Component
             ->one();
 
         if ($record) {
-            return new Customer($record);
+            return new SquareCustomer($record);
         }
 
         return null;
     }
 
     /**
-     * @param \craft\commerce\square\models\Customer $customer
+     * @param \craft\commerce\square\models\SquareCustomer $customer
      *
      * @return bool
      * @throws \craft\commerce\square\errors\CustomerException
      */
-    public function saveCustomer(Customer $customer): bool
+    public function saveCustomer(SquareCustomer $customer): bool
     {
         if ($customer->id) {
             $record = CustomerRecord::findOne($customer->id);

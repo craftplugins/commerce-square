@@ -10,7 +10,6 @@ use yii\base\Event;
 
 /**
  * Class Plugin
- * @property \craft\commerce\square\services\Customers $customers
  *
  * @package craft\commerce\square
  */
@@ -35,5 +34,17 @@ class Plugin extends \craft\base\Plugin
                 $event->types[] = Gateway::class;
             }
         );
+    }
+
+    /**
+     * @return \craft\commerce\square\services\Customers
+     * @throws \yii\base\InvalidConfigException
+     */
+    public function getCustomers(): Customers
+    {
+        /** @var Customers $customers */
+        $customers = $this->get('customers');
+
+        return $customers;
     }
 }

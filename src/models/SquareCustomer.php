@@ -10,7 +10,7 @@ use craft\commerce\square\records\Customer as CustomerRecord;
  *
  * @package craft\commerce\square\models
  */
-class Customer extends Model
+class SquareCustomer extends Model
 {
     /**
      * @var int

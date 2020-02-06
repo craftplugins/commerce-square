@@ -33,7 +33,7 @@ function initSquare() {
         var formElement = containerElement.closest('form')
 
         /** @type HTMLInputElement */
-        var cardNonce = containerElement.querySelector('input[name="cardNonce"]')
+        var cardNonce = containerElement.querySelector('input[name="token"]')
         cardNonce.value = nonce
 
         /** @type HTMLInputElement */
