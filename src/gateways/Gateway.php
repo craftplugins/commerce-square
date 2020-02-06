@@ -3,25 +3,33 @@
 namespace craft\commerce\square\gateways;
 
 use Craft;
+use craft\commerce\base\RequestResponseInterface;
+use craft\commerce\elements\Order;
 use craft\commerce\errors\PaymentException;
 use craft\commerce\models\Address;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
+use craft\commerce\models\Transaction;
 use craft\commerce\omnipay\base\CreditCardGateway;
-use craft\commerce\square\models\Customer;
+use craft\commerce\square\models\SquareCustomer;
 use craft\commerce\square\models\SquarePaymentForm;
-use craft\commerce\square\Plugin;
+use craft\commerce\square\Plugin as Square;
+use craft\commerce\Plugin as Commerce;
 use craft\commerce\square\web\assets\PaymentFormAsset;
 use craft\elements\User;
 use craft\web\View;
 use Omnipay\Common\AbstractGateway;
+use Omnipay\Common\CreditCard;
 use Omnipay\Common\Message\ResponseInterface;
+use Omnipay\Square\Gateway as OmnipayGateway;
 use SquareConnect\Model\Address as SquareAddress;
+use craft\commerce\records\Transaction as TransactionRecord;
 
 /**
  * Class SquareCommerceGateway
  *
  * @package craft\commerce\square\gateways
+ * @method OmnipayGateway gateway()
  */
 class Gateway extends CreditCardGateway
 {
@@ -147,14 +155,14 @@ class Gateway extends CreditCardGateway
     /**
      * @param \craft\elements\User $user
      *
-     * @return \craft\commerce\square\models\Customer
+     * @return \craft\commerce\square\models\SquareCustomer
      */
-    public function createCustomer(User $user): Customer
+    public function createCustomer(User $user): SquareCustomer
     {
         /** @var \craft\commerce\square\gateways\OmnipayGateway $gateway */
         $gateway = $this->gateway();
 
-        $commerceCustomer = \craft\commerce\Plugin::getInstance()->getCustomers()->getCustomerByUserId($user->id);
+        $commerceCustomer = Commerce::getInstance()->getCustomers()->getCustomerByUserId($user->id);
 
         /** @var \Omnipay\Square\Message\CreateCustomerRequest $request */
         $request = $gateway->createCustomer();
@@ -163,13 +171,15 @@ class Gateway extends CreditCardGateway
         $request->setEmail($user->email);
         $request->setReferenceId($user->id);
 
-        $address = $this->getSquareAddress($commerceCustomer->primaryBillingAddress);
-        $request->setAddress($address);
+        if ($commerceCustomer->primaryBillingAddress) {
+            $squareAddress = $this->getSquareAddress($commerceCustomer->primaryBillingAddress);
+            $request->setAddress($squareAddress);
+        }
 
         /** @var \Omnipay\Square\Message\CustomerResponse $response */
         $response = $this->sendRequest($request);
 
-        return new Customer([
+        return new SquareCustomer([
             'userId' => $user->id,
             'gatewayId' => $this->id,
             'reference' => $response->getCustomerReference(),
@@ -184,21 +194,21 @@ class Gateway extends CreditCardGateway
      * @return \craft\commerce\models\PaymentSource
      * @throws \craft\commerce\errors\PaymentException
      * @throws \craft\commerce\square\errors\CustomerException
+     * @throws \yii\base\InvalidConfigException
      */
     public function createPaymentSource(BasePaymentForm $sourceData, int $userId): PaymentSource
     {
-        /** @var SquarePaymentForm $paymentForm */
-        $paymentForm = $sourceData;
+        /** @var SquarePaymentForm $sourceData */
+
+        $user = Craft::$app->getUsers()->getUserById($userId);
+        $customer = Square::getInstance()->getCustomers()->getCustomer($this, $user);
 
         /** @var \craft\commerce\square\gateways\OmnipayGateway $gateway */
         $gateway = $this->gateway();
 
-        $user = Craft::$app->getUsers()->getUserById($userId);
-        $customer = Plugin::getInstance()->customers->getCustomer($this, $user);
-
         $createCardRequest = $gateway->createCard([
-            'card' => $paymentForm->cardNonce,
-            'cardholderName' => $paymentForm->cardholderName,
+            'card' => $sourceData->cardNonce,
+            'cardholderName' => $sourceData->cardholderName,
             'customerReference' => $customer->reference,
         ]);
 
@@ -215,6 +225,38 @@ class Gateway extends CreditCardGateway
     }
 
     /**
+     * @param \craft\commerce\models\Transaction                   $transaction
+     * @param \craft\commerce\models\payments\BasePaymentForm|null $form
+     *
+     * @return mixed
+     * @throws \yii\base\Exception
+     */
+    protected function createRequest(Transaction $transaction, BasePaymentForm $form = null)
+    {
+        /** @var SquarePaymentForm $form */
+
+        $request = parent::createRequest($transaction, $form);
+
+        $request['idempotencyKey'] = $transaction->hash;
+
+        if (in_array($transaction->type, [TransactionRecord::TYPE_CAPTURE, TransactionRecord::TYPE_REFUND], false)) {
+            $request['transactionId'] = $transaction->reference;
+        }
+
+        if ($transaction->type == TransactionRecord::TYPE_AUTHORIZE) {
+            // TODO: Authorize transactions don’t appear to be supported by the Omnipay extension (needs investigation and maybe a PR)
+            $request['autocomplete'] = false;
+        }
+
+        if ($form !== null) {
+            $request['customerReference'] = $form->customerReference;
+            $request['nonce'] = $form->token;
+        }
+
+        return $request;
+    }
+
+    /**
      * @param \Omnipay\Common\Message\ResponseInterface $response
      *
      * @return string
@@ -224,8 +266,7 @@ class Gateway extends CreditCardGateway
     {
         if (!$response->isSuccessful()) {
             throw new PaymentException(
-                $response->getErrorDetail(),
-                $response->getErrorCode()
+                $response->getErrorDetail()
             );
         }
 
