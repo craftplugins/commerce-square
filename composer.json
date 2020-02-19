@@ -1,5 +1,5 @@
 {
-  "name": "craft-plugins/craft-commerce-square",
+  "name": "craftplugins/commerce-square",
   "description": "Square payment gateway plugin for Craft Commerce 2",
   "version": "0.1.0",
   "type": "craft-plugin",
@@ -13,7 +13,7 @@
     "craftcms/cms": "^3.1.5",
     "craftcms/commerce": "^2.0|^3.0",
     "craftcms/commerce-omnipay": "2.1.0.1",
-    "blasttech/omnipay-square": "^1.2",
+    "blasttech/omnipay-square": "dev-feature/delayed-payments as 1.2.1",
     "square/connect": "^2.20191120"
   },
   "autoload": {
@@ -24,5 +24,11 @@
   "extra": {
     "name": "Square for Craft Commerce",
     "handle": "commerce-square"
-  }
+  },
+  "repositories": [
+    {
+      "type": "git",
+      "url": "https://github.com/joshuabaker/omnipay-square.git"
+    }
+  ]
 }
