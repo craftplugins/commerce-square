@@ -18,8 +18,6 @@ class PaymentFormAsset extends AssetBundle
     {
         $this->sourcePath = __DIR__;
 
-        // $this->css = [];
-
         $this->js = [
             'js/paymentform.js',
         ];

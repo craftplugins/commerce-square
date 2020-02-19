@@ -3,27 +3,23 @@
 namespace craft\commerce\square\gateways;
 
 use Craft;
-use craft\commerce\base\RequestResponseInterface;
-use craft\commerce\elements\Order;
 use craft\commerce\errors\PaymentException;
 use craft\commerce\models\Address;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
 use craft\commerce\models\Transaction;
 use craft\commerce\omnipay\base\CreditCardGateway;
+use craft\commerce\Plugin as Commerce;
+use craft\commerce\records\Transaction as TransactionRecord;
 use craft\commerce\square\models\SquareCustomer;
 use craft\commerce\square\models\SquarePaymentForm;
 use craft\commerce\square\Plugin as Square;
-use craft\commerce\Plugin as Commerce;
 use craft\commerce\square\web\assets\PaymentFormAsset;
 use craft\elements\User;
 use craft\web\View;
 use Omnipay\Common\AbstractGateway;
-use Omnipay\Common\CreditCard;
 use Omnipay\Common\Message\ResponseInterface;
-use Omnipay\Square\Gateway as OmnipayGateway;
 use SquareConnect\Model\Address as SquareAddress;
-use craft\commerce\records\Transaction as TransactionRecord;
 
 /**
  * Class SquareCommerceGateway
@@ -239,13 +235,15 @@ class Gateway extends CreditCardGateway
 
         $request['idempotencyKey'] = $transaction->hash;
 
-        if (in_array($transaction->type, [TransactionRecord::TYPE_CAPTURE, TransactionRecord::TYPE_REFUND], false)) {
-            $request['transactionId'] = $transaction->reference;
-        }
-
-        if ($transaction->type == TransactionRecord::TYPE_AUTHORIZE) {
-            // TODO: Authorize transactions don’t appear to be supported by the Omnipay extension (needs investigation and maybe a PR)
-            $request['autocomplete'] = false;
+        switch ($transaction->type) {
+            case TransactionRecord::TYPE_CAPTURE :
+            case TransactionRecord::TYPE_REFUND :
+                $request['transactionId'] = $transaction->reference;
+                break;
+            case TransactionRecord::TYPE_AUTHORIZE :
+                // TODO: Authorize transactions don’t appear to be supported by the Omnipay extension (needs investigation and maybe a PR)
+                $request['autocomplete'] = false;
+                break;
         }
 
         if ($form !== null) {

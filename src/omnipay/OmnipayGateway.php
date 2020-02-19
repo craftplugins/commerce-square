@@ -2,18 +2,17 @@
 
 namespace craft\commerce\square\gateways;
 
-use Omnipay\Common\Message\RequestInterface;
 use Omnipay\Square\Gateway;
 
 /**
- * Class SquareOmnipayGateway
- * @method RequestInterface authorize(array $options = [])
- * @method RequestInterface completeAuthorize(array $options = [])
- * @method RequestInterface capture(array $options = [])
- * @method RequestInterface void(array $options = [])
- * @method RequestInterface updateCard(array $options = [])
+ * Class OmnipayGateway
  *
  * @package craft\commerce\square\gateways
+ * @method \Omnipay\Common\Message\RequestInterface authorize(array $options = [])
+ * @method \Omnipay\Common\Message\RequestInterface completeAuthorize(array $options = [])
+ * @method \Omnipay\Common\Message\RequestInterface capture(array $options = [])
+ * @method \Omnipay\Common\Message\RequestInterface void(array $options = [])
+ * @method \Omnipay\Common\Message\RequestInterface updateCard(array $options = [])
  */
 class OmnipayGateway extends Gateway
 {

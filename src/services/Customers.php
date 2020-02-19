@@ -3,7 +3,6 @@
 namespace craft\commerce\square\services;
 
 use craft\base\Component;
-use craft\commerce\Plugin as Commerce;
 use craft\commerce\square\errors\CustomerException;
 use craft\commerce\square\gateways\Gateway;
 use craft\commerce\square\models\SquareCustomer;
