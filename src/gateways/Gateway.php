@@ -204,8 +204,8 @@ class Gateway extends CreditCardGateway
         $gateway = $this->gateway();
 
         $createCardRequest = $gateway->createCard([
-            'card' => $sourceData->cardNonce,
-            'cardholderName' => $sourceData->cardholderName,
+            'card' => $sourceData->token,
+            'cardholderName' => $sourceData->getCardholderName(),
             'customerReference' => $customer->reference,
         ]);
 
