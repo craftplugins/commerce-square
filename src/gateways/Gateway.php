@@ -20,6 +20,7 @@ use craft\web\View;
 use Omnipay\Common\AbstractGateway;
 use Omnipay\Common\Message\ResponseInterface;
 use SquareConnect\Model\Address as SquareAddress;
+use SquareConnect\ObjectSerializer;
 
 /**
  * Class SquareCommerceGateway
@@ -215,7 +216,7 @@ class Gateway extends CreditCardGateway
             'userId' => $userId,
             'gatewayId' => $this->id,
             'token' => $this->extractCardReference($response),
-            'response' => $response->getData(),
+            'response' => ObjectSerializer::sanitizeForSerialization($response->getData()),
             'description' => $this->extractPaymentSourceDescription($response),
         ]);
     }
