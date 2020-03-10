@@ -5,6 +5,7 @@ namespace craft\commerce\square\services;
 use craft\base\Component;
 use craft\commerce\square\errors\CustomerException;
 use craft\commerce\square\gateways\Gateway;
+use craft\commerce\square\gateways\SquareGateway;
 use craft\commerce\square\models\SquareCustomer;
 use craft\commerce\square\records\Customer as CustomerRecord;
 use craft\db\Query;
@@ -14,22 +15,23 @@ use craft\elements\User;
  * Class Customers
  *
  * @package craft\commerce\square\services
+ * @property \craft\db\Query $customerQuery
  */
 class Customers extends Component
 {
     /**
-     * @param \craft\commerce\square\gateways\Gateway $gateway
-     * @param \craft\elements\User                    $user
+     * @param \craft\commerce\square\gateways\SquareGateway $gateway
+     * @param int                                           $userId
      *
      * @return \craft\commerce\square\models\SquareCustomer
      * @throws \craft\commerce\square\errors\CustomerException
      */
-    public function getCustomer(Gateway $gateway, User $user): SquareCustomer
+    public function getCustomer(SquareGateway $gateway, int $userId): SquareCustomer
     {
         $record = $this->getCustomerQuery()
             ->where([
                 'gatewayId' => $gateway->id,
-                'userId' => $user->id,
+                'userId' => $userId,
             ])
             ->one();
 
@@ -37,14 +39,14 @@ class Customers extends Component
             return new SquareCustomer($record);
         }
 
-        $customer = $gateway->createCustomer($user);
+        $squareCustomer = $gateway->createCustomer($userId);
 
-        if (!$this->saveCustomer($customer)) {
-            $errors = implode(', ', $customer->getErrorSummary(true));
+        if (!$this->saveCustomer($squareCustomer)) {
+            $errors = implode(', ', $squareCustomer->getErrorSummary(true));
             throw new CustomerException("Could not save customer: {$errors}");
         }
 
-        return $customer;
+        return $squareCustomer;
     }
 
     /**

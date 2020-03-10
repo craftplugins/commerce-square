@@ -6,75 +6,73 @@ function initSquare() {
   }
 
   /**
-   *
    * @param element HTMLElement
    * @param errors Array
    */
   function outputErrors(element, errors) {
-    element.innerHTML = errors.map(function () {
-      return '<li>' + outputErrors.message + '</li>'
-    })
+    element.innerHTML = errors
+      .map(function (error) {
+        return '<li>' + error.message + '</li>'
+      })
+      .join('')
   }
 
-  var containerElements = document.querySelectorAll('.square-payment-form-container')
+  var containerElements = document.querySelectorAll('.square-payment-form-container'), i
 
-  containerElements.forEach(function (containerElement) {
+  for (i = 0; i < containerElements.length; i++) {
+    var containerElement = containerElements[i]
     var paymentForm
     var params = JSON.parse(containerElement.getAttribute('data-params'))
-    var errorEl = containerElement.querySelector('.square-payment-form-errors')
 
-    params.callbacks = {
-      cardNonceResponseReceived: function (errors, nonce, cardData) {
-        if (errors) {
-          return outputErrors(errorEl, errors)
-        }
+    /** @type HTMLFormElement */
+    var formElement = containerElement.closest('form')
 
-        /** @type HTMLFormElement */
-        var formElement = containerElement.closest('form')
+    var errorsElement = containerElement.querySelector('.square-payment-form-errors')
 
-        /** @type HTMLInputElement */
-        var cardNonce = containerElement.querySelector('input[name="token"]')
-        cardNonce.value = nonce
+    if (!params.callbacks) {
+      params.callbacks = {}
+    }
 
-        /** @type HTMLInputElement */
-        var verificationTokenEl = containerElement.querySelector('input[name="verificationToken"]')
+    params.callbacks.cardNonceResponseReceived = function (errors, nonce, cardData) {
+      if (errors) {
+        return outputErrors(errorsElement, errors)
+      }
 
-        // @TODO: Move to params
-        var verificationDetails = {
-          intent: 'STORE',
-          billingContact: {
-            givenName: 'Jane',
-            familyName: 'Doe',
-          },
-        }
+      /** @type HTMLInputElement */
+      var cardNonce = containerElement.querySelector('input[name="token"]')
+      cardNonce.value = nonce
 
-        paymentForm.verifyBuyer(
-          nonce,
-          verificationDetails,
-          function (errors, verificationResult) {
-            if (errors) {
-              return outputErrors(errorEl, errors)
-            }
+      var verificationDetails = JSON.parse(containerElement.getAttribute('data-verificationDetails'))
 
-            verificationTokenEl.value = verificationResult.token
+      paymentForm.verifyBuyer(
+        nonce,
+        verificationDetails,
+        function (errors, verificationResult) {
+          if (errors) {
+            return outputErrors(errorsElement, errors)
+          }
 
-            formElement.submit()
-          },
-        )
-      },
+          /** @type HTMLInputElement */
+          var verificationTokenEl = containerElement.querySelector('input[name="verificationToken"]')
+          verificationTokenEl.value = verificationResult.token
+
+          formElement.submit()
+        },
+      )
     }
 
     paymentForm = new SqPaymentForm(params)
 
-    var formElement = containerElement.closest('form')
     formElement.addEventListener('submit', function (event) {
-      event.preventDefault()
-
-      paymentForm.requestCardNonce()
+      var formData = new FormData(formElement)
+      if (!formData.get('paymentSourceId')) {
+        event.preventDefault()
+        paymentForm.requestCardNonce()
+      }
     })
 
     paymentForm.build()
-  })
+  }
 }
 
 initSquare()

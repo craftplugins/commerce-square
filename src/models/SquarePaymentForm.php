@@ -24,6 +24,11 @@ class SquarePaymentForm extends CreditCardPaymentForm
     public $token;
 
     /**
+     * @var string
+     */
+    public $verificationToken;
+
+    /**
      * @return array
      */
     public function rules(): array
