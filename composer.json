@@ -12,9 +12,10 @@
   "require": {
     "craftcms/cms": "^3.1.5",
     "craftcms/commerce": "^2.0|^3.0",
-    "craftcms/commerce-omnipay": "2.1.0.1",
-    "blasttech/omnipay-square": "dev-feature/delayed-payments as 1.2.1",
     "square/connect": "^2.20191120"
+  },
+  "require-dev": {
+    "roave/security-advisories": "dev-master"
   },
   "autoload": {
     "psr-4": {
@@ -24,11 +25,5 @@
   "extra": {
     "name": "Square for Craft Commerce",
     "handle": "commerce-square"
-  },
-  "repositories": [
-    {
-      "type": "git",
-      "url": "https://github.com/joshuabaker/omnipay-square.git"
-    }
-  ]
+  }
 }

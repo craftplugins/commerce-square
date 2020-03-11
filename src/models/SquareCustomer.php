@@ -2,30 +2,29 @@
 
 namespace craft\commerce\square\models;
 
+use Craft;
 use craft\commerce\base\Model;
-use craft\commerce\square\records\Customer as CustomerRecord;
+use craft\commerce\Plugin as Commerce;
+use craft\commerce\square\gateways\SquareGateway;
+use craft\commerce\square\records\SquareCustomer as CustomerRecord;
+use craft\elements\User;
 
 /**
- * Class Customer
+ * Class SquareCustomer
  *
  * @package craft\commerce\square\models
  */
 class SquareCustomer extends Model
 {
     /**
-     * @var int
-     */
-    public $id;
-
-    /**
-     * @var int
-     */
-    public $userId;
-
-    /**
      * @var string
      */
     public $gatewayId;
+
+    /**
+     * @var int
+     */
+    public $id;
 
     /**
      * @var string
@@ -38,6 +37,21 @@ class SquareCustomer extends Model
     public $response;
 
     /**
+     * @var int
+     */
+    public $userId;
+
+    /**
+     * @var \craft\commerce\square\gateways\SquareGateway
+     */
+    protected $gateway;
+
+    /**
+     * @var \craft\elements\User
+     */
+    protected $user;
+
+    /**
      * @return string
      */
     public function __toString()
@@ -46,9 +60,34 @@ class SquareCustomer extends Model
     }
 
     /**
+     * @return \craft\commerce\square\gateways\SquareGateway
+     */
+    public function getGateway(): SquareGateway
+    {
+        if ($this->gateway === null) {
+            $this->gateway = Commerce::getInstance()->getGateways()
+                ->getGatewayById($this->gatewayId);
+        }
+
+        return $this->gateway;
+    }
+
+    /**
+     * @return \craft\elements\User
+     */
+    public function getUser(): User
+    {
+        if ($this->user === null) {
+            $this->user = Craft::$app->getUsers()->getUserById($this->userId);
+        }
+
+        return $this->user;
+    }
+
+    /**
      * @inheritdoc
      */
-    public function rules()
+    public function rules(): array
     {
         return [
             [['reference'], 'unique', 'targetAttribute' => ['gatewayId', 'reference'], 'targetClass' => CustomerRecord::class],

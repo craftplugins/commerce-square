@@ -3,8 +3,8 @@
 namespace craft\commerce\square;
 
 use craft\commerce\services\Gateways;
-use craft\commerce\square\gateways\Gateway;
-use craft\commerce\square\services\Customers;
+use craft\commerce\square\gateways\SquareGateway;
+use craft\commerce\square\services\SquareCustomers;
 use craft\events\RegisterComponentTypesEvent;
 use yii\base\Event;
 
@@ -12,6 +12,7 @@ use yii\base\Event;
  * Class Plugin
  *
  * @package craft\commerce\square
+ * @property \craft\commerce\square\services\SquareCustomers $squareCustomers
  */
 class Plugin extends \craft\base\Plugin
 {
@@ -23,26 +24,26 @@ class Plugin extends \craft\base\Plugin
         parent::init();
 
         $this->setComponents([
-            'customers' => Customers::class,
+            'customers' => SquareCustomers::class,
         ]);
 
         // Register gateway
         Event::on(
             Gateways::class,
             Gateways::EVENT_REGISTER_GATEWAY_TYPES,
-            function (RegisterComponentTypesEvent $event) {
-                $event->types[] = Gateway::class;
+            static function (RegisterComponentTypesEvent $event) {
+                $event->types[] = SquareGateway::class;
             }
         );
     }
 
     /**
-     * @return \craft\commerce\square\services\Customers
+     * @return \craft\commerce\square\services\SquareCustomers
      * @throws \yii\base\InvalidConfigException
      */
-    public function getCustomers(): Customers
+    public function getSquareCustomers(): SquareCustomers
     {
-        /** @var Customers $customers */
+        /** @var SquareCustomers $customers */
         $customers = $this->get('customers');
 
         return $customers;

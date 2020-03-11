@@ -3,6 +3,7 @@
 namespace craft\commerce\square\web\assets;
 
 use craft\web\AssetBundle;
+use yii\web\JqueryAsset;
 
 /**
  * Class PaymentFormAsset
@@ -20,6 +21,10 @@ class PaymentFormAsset extends AssetBundle
 
         $this->js = [
             'js/paymentform.js',
+        ];
+
+        $this->depends = [
+            JqueryAsset::class,
         ];
 
         parent::init();

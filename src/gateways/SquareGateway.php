@@ -14,9 +14,15 @@ use craft\commerce\square\models\SquareCustomer;
 use craft\commerce\square\models\SquarePaymentForm;
 use craft\commerce\square\models\SquareRequestResponse;
 use craft\commerce\square\Plugin as Square;
+use craft\commerce\square\web\assets\PaymentFormAsset;
+use craft\elements\User;
+use craft\errors\ElementNotFoundException;
+use craft\events\ModelEvent;
 use craft\web\Response as WebResponse;
+use craft\web\View;
 use SquareConnect\Api\CustomersApi;
 use SquareConnect\Api\PaymentsApi;
+use SquareConnect\Api\RefundsApi;
 use SquareConnect\ApiClient;
 use SquareConnect\ApiException;
 use SquareConnect\Configuration;
@@ -25,7 +31,9 @@ use SquareConnect\Model\CreateCustomerCardRequest;
 use SquareConnect\Model\CreateCustomerRequest;
 use SquareConnect\Model\CreatePaymentRequest;
 use SquareConnect\Model\Money;
+use SquareConnect\Model\RefundPaymentRequest;
 use SquareConnect\ObjectSerializer;
+use yii\base\Event;
 
 /**
  * Class SquareGateway
@@ -71,6 +79,25 @@ class SquareGateway extends Gateway
     /**
      * @inheritDoc
      */
+    public function init()
+    {
+        parent::init();
+
+        Event::on(
+            User::class,
+            User::EVENT_BEFORE_DELETE,
+            static function (ModelEvent $event) {
+                /** @var User $user */
+                $user = $event->sender;
+
+                Square::getInstance()->getSquareCustomers()->deleteSquareCustomer($this, $user->id);
+            }
+        );
+    }
+
+    /**
+     * @inheritDoc
+     */
     public function authorize(Transaction $transaction, BasePaymentForm $form): RequestResponseInterface
     {
         return $this->authorizeOrPurchase($transaction, $form, false);
@@ -87,16 +114,14 @@ class SquareGateway extends Gateway
     {
         /** @var \craft\commerce\square\models\SquarePaymentForm $form */
 
-        $amount = new Money();
-        $amount->setAmount($transaction->amount * 100);
-        $amount->setCurrency($transaction->currency);
+        $amount = $this->getAmountMoney($transaction);
 
         $request = new CreatePaymentRequest();
         $request->setAmountMoney($amount);
         $request->setAutocomplete(false);
         $request->setIdempotencyKey($transaction->hash);
         $request->setLocationId($this->getLocationId());
-        $request->setSourceId($form->token);
+        $request->setSourceId($form->nonce);
 
         try {
             $payments = new PaymentsApi($this->getClient());
@@ -106,6 +131,25 @@ class SquareGateway extends Gateway
         } catch (ApiException $exception) {
             return new SquareRequestResponse($exception);
         }
+    }
+
+    /**
+     * @param \craft\commerce\models\Transaction $transaction
+     *
+     * @return \SquareConnect\Model\Money
+     */
+    protected function getAmountMoney(Transaction $transaction): Money
+    {
+        $currency = Commerce::getInstance()->getCurrencies()
+            ->getCurrencyByIso($transaction->paymentCurrency);
+
+        $amount = $transaction->paymentAmount * (10 ** $currency->minorUnit);
+
+        $money = new Money();
+        $money->setAmount($amount);
+        $money->setCurrency($currency->alphabeticCode);
+
+        return $money;
     }
 
     /**
@@ -172,10 +216,15 @@ class SquareGateway extends Gateway
      * @param int $userId
      *
      * @return \craft\commerce\square\models\SquareCustomer|null
+     * @throws \craft\errors\ElementNotFoundException
      */
     public function createCustomer(int $userId): ?SquareCustomer
     {
         $user = Craft::$app->getUsers()->getUserById($userId);
+
+        if ($user === null) {
+            throw new ElementNotFoundException("No user exists with the ID '{$userId}'");
+        }
 
         $request = new CreateCustomerRequest();
         $request->setGivenName($user->firstName);
@@ -202,7 +251,7 @@ class SquareGateway extends Gateway
     /**
      * @inheritDoc
      * @throws \yii\base\InvalidConfigException
-     * @throws \craft\commerce\square\errors\CustomerException
+     * @throws \craft\errors\ElementNotFoundException
      */
     public function createPaymentSource(BasePaymentForm $sourceData, int $userId): PaymentSource
     {
@@ -210,10 +259,10 @@ class SquareGateway extends Gateway
 
         $user = Craft::$app->getUsers()->getUserById($userId);
         $customer = Commerce::getInstance()->getCustomers()->getCustomerByUserId($user->id);
-        $squareCustomer = Square::getInstance()->getCustomers()->getCustomer($this, $user);
+        $squareCustomer = Square::getInstance()->getSquareCustomers()->getOrCreateSquareCustomer($this, $user->id);
 
         $request = new CreateCustomerCardRequest();
-        $request->setCardNonce($sourceData->token);
+        $request->setCardNonce($sourceData->nonce);
         $request->setVerificationToken($sourceData->verificationToken);
         $request->setCardholderName($sourceData->getCardholderName());
 
@@ -232,7 +281,7 @@ class SquareGateway extends Gateway
         }
 
         try {
-            $customersApi = new CustomersApi();
+            $customersApi = new CustomersApi($this->getClient());
             $response = $customersApi->createCustomerCard($squareCustomer->reference, $request);
         } catch (ApiException $exception) {
             return null;
@@ -259,8 +308,8 @@ class SquareGateway extends Gateway
      * @param $token
      *
      * @return bool
-     * @throws \craft\commerce\square\errors\CustomerException
      * @throws \yii\base\InvalidConfigException
+     * @throws \craft\errors\ElementNotFoundException
      */
     public function deletePaymentSource($token): bool
     {
@@ -270,8 +319,8 @@ class SquareGateway extends Gateway
 
         $paymentSource = new PaymentSource($paymentSourceRecord);
 
-        $squareCustomer = Square::getInstance()->getCustomers()
-            ->getCustomer($this, $paymentSource->userId);
+        $squareCustomer = Square::getInstance()->getSquareCustomers()
+            ->getOrCreateSquareCustomer($this, $paymentSource->userId);
 
         if ($squareCustomer === null) {
             return false;
@@ -288,25 +337,43 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @inheritDoc
+     * @param array $params
+     *
+     * @return string|null
+     * @throws \Twig\Error\LoaderError
+     * @throws \Twig\Error\RuntimeError
+     * @throws \Twig\Error\SyntaxError
+     * @throws \yii\base\Exception
+     * @throws \yii\base\InvalidConfigException
      */
-    public function getPaymentFormHtml(array $params)
+    public function getPaymentFormHtml(array $params):?string
     {
         $params = array_replace_recursive([
-            'gateway' => $this,
-            'containerClass' => null,
-            'errorsClass' => null,
-            'squareParams' => [
+            'containerClass' => 'square-payment-form',
+            'errorClass' => 'square-payment-form-errors',
+            'square' => [
                 'applicationId' => Craft::parseEnv($this->appId),
-                'locationId' => Craft::parseEnv($this->locationId),
-                'inputClass' => 'sq-input',
                 'autoBuild' => false,
-                'card' => [
-                    'elementId' => 'sq-card',
-                ],
+                'locationId' => Craft::parseEnv($this->locationId),
             ],
+            'verification' => [],
         ], $params);
-        // TODO: Implement getPaymentFormHtml() method.
+
+        $view = Craft::$app->getView();
+
+        $previousMode = $view->getTemplateMode();
+        $view->setTemplateMode(View::TEMPLATE_MODE_CP);
+
+        $view->registerJsFile('https://js.squareupsandbox.com/v2/paymentform');
+        $view->registerAssetBundle(PaymentFormAsset::class);
+
+        $html = $view->renderTemplate('commerce-square/paymentforms/paymentform', [
+            'params' => $params,
+        ]);
+
+        $view->setTemplateMode($previousMode);
+
+        return $html;
     }
 
     /**
@@ -351,7 +418,21 @@ class SquareGateway extends Gateway
      */
     public function refund(Transaction $transaction): RequestResponseInterface
     {
-        // TODO: Implement refund() method.
+        $amount = $this->getAmountMoney($transaction);
+
+        $request = new RefundPaymentRequest();
+        $request->setIdempotencyKey($transaction->hash);
+        $request->setAmountMoney($amount);
+        $request->setReason($transaction->message);
+
+        try {
+            $refundsApi = new RefundsApi($this->getClient());
+            $response = $refundsApi->refundPayment($request);
+
+            return new SquareRequestResponse($response);
+        } catch (ApiException $exception) {
+            return new SquareRequestResponse($exception);
+        }
     }
 
     /**
