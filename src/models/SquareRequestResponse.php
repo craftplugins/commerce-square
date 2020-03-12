@@ -61,7 +61,11 @@ class SquareRequestResponse implements RequestResponseInterface
     public function getMessage(): string
     {
         if ($this->response instanceof ApiException) {
-            return $this->response->getMessage();
+            $responseBody = $this->response->getResponseBody();
+
+            if (isset($responseBody->errors[0]->detail)) {
+                return $responseBody->errors[0]->detail;
+            }
         }
 
         return '';
