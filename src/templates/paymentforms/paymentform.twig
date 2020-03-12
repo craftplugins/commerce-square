@@ -1,6 +1,4 @@
-<div class="{{ containerClass|trim }}" data-params="{{ squareParams|json_encode }}">
-  {{ hiddenInput('token') }}
+<div class="{{ params.containerClass }}" data-square="{{ params|json_encode }}">
+  {{ hiddenInput('nonce') }}
   {{ hiddenInput('verificationToken') }}
-  <div id="{{ squareParams.card.elementId }}"></div>
-  <ul class="{{ errorsClass|trim }}"></ul>
 </div>

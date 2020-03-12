@@ -2,27 +2,29 @@
 
 namespace craft\commerce\square\records;
 
-use craft\commerce\square\gateways\Gateway;
+use craft\commerce\square\gateways\SquareGateway;
 use craft\db\ActiveRecord;
 use craft\elements\User;
 use yii\db\ActiveQueryInterface;
 
 /**
- * Class Customer
+ * Class SquareCustomer
  *
- * @property int    $id
- * @property int    $userId
- * @property string $gatewayId
- * @property string $reference
- * @property string $response
+ * @property \yii\db\ActiveQueryInterface $gateway
+ * @property string                       $gatewayId
+ * @property int                          $id
+ * @property string                       $reference
+ * @property string                       $response
+ * @property \yii\db\ActiveQueryInterface $user
+ * @property int                          $userId
  * @package craft\commerce\square\records
  */
-class Customer extends ActiveRecord
+class SquareCustomer extends ActiveRecord
 {
     /**
      * @return string
      */
-    public static function tableName()
+    public static function tableName(): string
     {
         return '{{%square_customers}}';
     }
@@ -32,7 +34,7 @@ class Customer extends ActiveRecord
      */
     public function getGateway(): ActiveQueryInterface
     {
-        return $this->hasOne(Gateway::class, ['gatewayId' => 'id']);
+        return $this->hasOne(SquareGateway::class, ['gatewayId' => 'id']);
     }
 
     /**

@@ -15,7 +15,7 @@ class Install extends Migration
     /**
      * @return bool
      */
-    public function safeUp()
+    public function safeUp(): bool
     {
         $this->createTable('{{%square_customers}}', [
             'id' => $this->primaryKey(),
@@ -37,7 +37,7 @@ class Install extends Migration
     /**
      * @return bool
      */
-    public function safeDown()
+    public function safeDown(): bool
     {
         MigrationHelper::dropAllForeignKeysOnTable('{{%square_customers}}', $this);
         $this->dropTable('{{%square_customers}}');

@@ -4,12 +4,13 @@ namespace craft\commerce\square\models;
 
 use craft\commerce\models\payments\CreditCardPaymentForm;
 use craft\commerce\models\PaymentSource;
-use craft\commerce\square\Plugin;
+use craft\commerce\square\Plugin as Square;
 
 /**
  * Class SquarePaymentForm
  *
  * @package craft\commerce\square\models
+ * @property null|string $cardholderName
  */
 class SquarePaymentForm extends CreditCardPaymentForm
 {
@@ -21,20 +22,17 @@ class SquarePaymentForm extends CreditCardPaymentForm
     /**
      * @var string
      */
-    public $token;
+    public $nonce;
 
     /**
-     * @return array
+     * @var string
      */
-    public function rules(): array
-    {
-        return [[['token'], 'required']];
-    }
+    public $verificationToken;
 
     /**
      * @return string|null
      */
-    public function getCardholderName()
+    public function getCardholderName(): ?string
     {
         $firstName = trim($this->firstName);
         $lastName = trim($this->lastName);
@@ -57,22 +55,29 @@ class SquarePaymentForm extends CreditCardPaymentForm
     /**
      * @param \craft\commerce\models\PaymentSource $paymentSource
      *
-     * @throws \craft\commerce\square\errors\CustomerException
      * @throws \yii\base\InvalidConfigException
+     * @throws \craft\errors\ElementNotFoundException
      */
-    public function populateFromPaymentSource(PaymentSource $paymentSource)
+    public function populateFromPaymentSource(PaymentSource $paymentSource): void
     {
-        $this->token = $paymentSource->token;
+        $this->nonce = $paymentSource->token;
 
-        /** @var \craft\commerce\square\gateways\Gateway $gateway */
+        /** @var \craft\commerce\square\gateways\SquareGateway $gateway */
         $gateway = $paymentSource->getGateway();
 
-        /** @var \craft\commerce\square\models\SquareCustomer $customer */
-        $customer = Plugin::getInstance()->getCustomers()->getCustomer(
-            $gateway,
-            $paymentSource->getUser()
-        );
+        $customer = Square::getInstance()->getSquareCustomers()
+            ->getOrCreateSquareCustomer($gateway, $paymentSource->userId);
 
         $this->customerReference = $customer->reference;
+    }
+
+    /**
+     * @return array
+     */
+    public function rules(): array
+    {
+        return [
+            [['nonce'], 'required'],
+        ];
     }
 }

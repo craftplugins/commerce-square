@@ -5,74 +5,94 @@ function initSquare() {
     return setTimeout(initSquare, 100)
   }
 
-  /**
-   *
-   * @param element HTMLElement
-   * @param errors Array
-   */
-  function outputErrors(element, errors) {
-    element.innerHTML = errors.map(function () {
-      return '<li>' + outputErrors.message + '</li>'
-    })
+  function displayErrors($errors, errors) {
+    $errors.html(
+      '<ul>' + $.map(errors, function (error) {
+        return '<li>' + error + '</li>'
+      }) + '</ul>'
+    )
   }
 
-  var containerElements = document.querySelectorAll('.square-payment-form-container')
+  function getFormData($form) {
+    return $form.serializeArray().reduce(function (object, item) {
+      object[item.name] = item.value
+      return object
+    }, {})
+  }
 
-  containerElements.forEach(function (containerElement) {
-    var paymentForm
-    var params = JSON.parse(containerElement.getAttribute('data-params'))
-    var errorEl = containerElement.querySelector('.square-payment-form-errors')
+  $('[data-square]').each(function () {
+    var $container = $(this)
 
-    params.callbacks = {
-      cardNonceResponseReceived: function (errors, nonce, cardData) {
-        if (errors) {
-          return outputErrors(errorEl, errors)
-        }
+    // Get the parameters from the data attribute
+    var params = $container.data('square')
 
-        /** @type HTMLFormElement */
-        var formElement = containerElement.closest('form')
+    // Generate an ID for the card element
+    var id = 'sq-card-' + Math.random().toString(36).substring(7)
 
-        /** @type HTMLInputElement */
-        var cardNonce = containerElement.querySelector('input[name="token"]')
-        cardNonce.value = nonce
+    // Create a card element and append it to the container
+    $('<div />').prop('id', id).appendTo($container)
 
-        /** @type HTMLInputElement */
-        var verificationTokenEl = containerElement.querySelector('input[name="verificationToken"]')
+    // Get the form and relevant fields
+    var $form = $container.closest('form')
+    var $nonce = $form.find('[name="nonce"]')
+    var $verificationToken = $form.find('[name="verificationToken"]')
 
-        // @TODO: Move to params
-        var verificationDetails = {
-          intent: 'STORE',
-          billingContact: {
-            givenName: 'Jane',
-            familyName: 'Doe',
-          },
-        }
+    // Create and append an errors container
+    var $errors = $('<div />').addClass(params.errorClass).appendTo($container)
 
-        paymentForm.verifyBuyer(
-          nonce,
-          verificationDetails,
-          function (errors, verificationResult) {
+    // Create the Square Payment Form instance
+    // https://developer.squareup.com/docs/payment-form/payment-form-walkthrough
+    // noinspection JSUnusedGlobalSymbols
+    var paymentForm = new SqPaymentForm(
+      $.extend(params.square, {
+        autoBuild: false,
+        callbacks: {
+          cardNonceResponseReceived: function (errors, nonce) {
             if (errors) {
-              return outputErrors(errorEl, errors)
+              $form.data('processing', false)
+              return displayErrors($errors, errors)
             }
 
-            verificationTokenEl.value = verificationResult.token
+            $nonce.val(nonce)
 
-            formElement.submit()
-          },
-        )
-      },
-    }
+            if (params.verificationDetails) {
+              // Verification (SCA)
+              paymentForm.verifyBuyer(nonce, params.verificationDetails, function (errors, verificationResult) {
+                if (errors) {
+                  $form.data('processing', false)
+                  return displayErrors($errors, errors)
+                }
 
-    paymentForm = new SqPaymentForm(params)
+                $verificationToken.val(verificationResult.token)
 
-    var formElement = containerElement.closest('form')
-    formElement.addEventListener('submit', function (event) {
+                $form[0].submit()
+              })
+            } else {
+              // Just submit the form if we’re not verifying
+              $form[0].submit()
+            }
+          }
+        },
+        card: {
+          elementId: id
+        }
+      })
+    )
+
+    // Override the form submit event
+    $form.on('submit', function (event) {
       event.preventDefault()
 
+      if ($form.data('processing')) {
+        return false
+      }
+      $form.data('processing', true)
+
+      // Request a nonce from Square
       paymentForm.requestCardNonce()
     })
 
+    // Render the Square Payment Form
     paymentForm.build()
   })
 }
