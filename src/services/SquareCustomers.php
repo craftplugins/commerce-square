@@ -47,10 +47,9 @@ class SquareCustomers extends Component
      * @param \craft\commerce\square\gateways\SquareGateway $gateway
      * @param int                                           $userId
      *
-     * @return \craft\commerce\square\models\SquareCustomer
-     * @throws \craft\errors\ElementNotFoundException
+     * @return \craft\commerce\square\models\SquareCustomer|null
      */
-    public function getOrCreateSquareCustomer(SquareGateway $gateway, int $userId): SquareCustomer
+    public function getSquareCustomer(SquareGateway $gateway, int $userId):?SquareCustomer
     {
         /** @var SquareCustomerRecord|null $record */
         $record = $this->getSquareCustomerQuery()
@@ -60,8 +59,24 @@ class SquareCustomers extends Component
             ])
             ->one();
 
-        if ($record !== null) {
-            return new SquareCustomer($record);
+        if ($record === null) {
+            return null;
+        }
+
+        return new SquareCustomer($record);
+    }
+
+    /**
+     * @param \craft\commerce\square\gateways\SquareGateway $gateway
+     * @param int                                           $userId
+     *
+     * @return \craft\commerce\square\models\SquareCustomer
+     * @throws \craft\errors\ElementNotFoundException
+     */
+    public function getOrCreateSquareCustomer(SquareGateway $gateway, int $userId): SquareCustomer
+    {
+        if ($squareCustomer = $this->getSquareCustomer($gateway, $userId)) {
+            return $squareCustomer;
         }
 
         $squareCustomer = $gateway->createCustomer($userId);

@@ -69,6 +69,11 @@ class SquareGateway extends Gateway
     protected $client;
 
     /**
+     * @var string
+     */
+    protected $paymentSourceVerificationToken;
+
+    /**
      * @return string
      */
     public static function displayName(): string
@@ -104,84 +109,6 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param \craft\commerce\models\Transaction              $transaction
-     * @param \craft\commerce\models\payments\BasePaymentForm $form
-     * @param bool                                            $autocomplete
-     *
-     * @return \craft\commerce\base\RequestResponseInterface
-     */
-    protected function authorizeOrPurchase(Transaction $transaction, BasePaymentForm $form, bool $autocomplete = true): RequestResponseInterface
-    {
-        /** @var \craft\commerce\square\models\SquarePaymentForm $form */
-
-        $amount = $this->getAmountMoney($transaction);
-
-        $request = new CreatePaymentRequest();
-        $request->setAmountMoney($amount);
-        $request->setAutocomplete(false);
-        $request->setIdempotencyKey($transaction->hash);
-        $request->setLocationId($this->getLocationId());
-        $request->setSourceId($form->nonce);
-
-        try {
-            $payments = new PaymentsApi($this->getClient());
-            $response = $payments->createPayment($request);
-
-            return new SquareRequestResponse($response);
-        } catch (ApiException $exception) {
-            return new SquareRequestResponse($exception);
-        }
-    }
-
-    /**
-     * @param \craft\commerce\models\Transaction $transaction
-     *
-     * @return \SquareConnect\Model\Money
-     */
-    protected function getAmountMoney(Transaction $transaction): Money
-    {
-        $currency = Commerce::getInstance()->getCurrencies()
-            ->getCurrencyByIso($transaction->paymentCurrency);
-
-        $amount = $transaction->paymentAmount * (10 ** $currency->minorUnit);
-
-        $money = new Money();
-        $money->setAmount($amount);
-        $money->setCurrency($currency->alphabeticCode);
-
-        return $money;
-    }
-
-    /**
-     * @return string
-     */
-    protected function getLocationId(): string
-    {
-        return Craft::parseEnv($this->locationId);
-    }
-
-    /**
-     * @return \SquareConnect\ApiClient
-     */
-    protected function getClient(): ApiClient
-    {
-        if ($this->client !== null) {
-            return $this->client;
-        }
-
-        $config = new Configuration();
-        $config->setAccessToken(Craft::parseEnv($this->accessToken));
-
-        if ($this->testMode) {
-            $config->setHost('https://connect.squareupsandbox.com');
-        } else {
-            $config->setHost('https://connect.squareup.com');
-        }
-
-        return $this->client = new ApiClient($config);
-    }
-
-    /**
      * @inheritDoc
      */
     public function capture(Transaction $transaction, string $reference): RequestResponseInterface
@@ -213,42 +140,6 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param int $userId
-     *
-     * @return \craft\commerce\square\models\SquareCustomer|null
-     * @throws \craft\errors\ElementNotFoundException
-     */
-    public function createCustomer(int $userId): ?SquareCustomer
-    {
-        $user = Craft::$app->getUsers()->getUserById($userId);
-
-        if ($user === null) {
-            throw new ElementNotFoundException("No user exists with the ID '{$userId}'");
-        }
-
-        $request = new CreateCustomerRequest();
-        $request->setGivenName($user->firstName);
-        $request->setFamilyName($user->lastName);
-        $request->setReferenceId($user->id);
-        $request->setEmailAddress($user->email);
-
-        try {
-            $customersApi = new CustomersApi($this->getClient());
-            $response = $customersApi->createCustomer($request);
-        } catch (ApiException $exception) {
-            return null;
-        }
-
-        $squareCustomer = new SquareCustomer();
-        $squareCustomer->userId = $user->id;
-        $squareCustomer->gatewayId = $this->id;
-        $squareCustomer->reference = $response->getCustomer()->getReferenceId();
-        $squareCustomer->response = ObjectSerializer::sanitizeForSerialization($response);
-
-        return $squareCustomer;
-    }
-
-    /**
      * @inheritDoc
      * @throws \yii\base\InvalidConfigException
      * @throws \craft\errors\ElementNotFoundException
@@ -259,7 +150,11 @@ class SquareGateway extends Gateway
 
         $user = Craft::$app->getUsers()->getUserById($userId);
         $customer = Commerce::getInstance()->getCustomers()->getCustomerByUserId($user->id);
-        $squareCustomer = Square::getInstance()->getSquareCustomers()->getOrCreateSquareCustomer($this, $user->id);
+        $squareCustomer = Square::getInstance()->getSquareCustomers()
+            ->getOrCreateSquareCustomer($this, $user->id);
+
+        // Save the verification token locally
+        $this->paymentSourceVerificationToken = $sourceData->verificationToken;
 
         $request = new CreateCustomerCardRequest();
         $request->setCardNonce($sourceData->nonce);
@@ -309,18 +204,16 @@ class SquareGateway extends Gateway
      *
      * @return bool
      * @throws \yii\base\InvalidConfigException
-     * @throws \craft\errors\ElementNotFoundException
      */
     public function deletePaymentSource($token): bool
     {
-        $paymentSourceRecord = PaymentSourceRecord::find()
-            ->where(['token', $token])
-            ->one();
-
-        $paymentSource = new PaymentSource($paymentSourceRecord);
+        $userId = PaymentSourceRecord::find()
+            ->select(['userId'])
+            ->where(['token' => $token])
+            ->scalar();
 
         $squareCustomer = Square::getInstance()->getSquareCustomers()
-            ->getOrCreateSquareCustomer($this, $paymentSource->userId);
+            ->getSquareCustomer($this, $userId);
 
         if ($squareCustomer === null) {
             return false;
@@ -345,18 +238,25 @@ class SquareGateway extends Gateway
      * @throws \Twig\Error\SyntaxError
      * @throws \yii\base\Exception
      * @throws \yii\base\InvalidConfigException
+     * @throws \Throwable
      */
-    public function getPaymentFormHtml(array $params):?string
+    public function getPaymentFormHtml(array $params): ?string
     {
+        $order = Commerce::getInstance()->getCarts()->getCart(true);
+        $user = Craft::$app->getUser()->getIdentity();
+
         $params = array_replace_recursive([
             'containerClass' => 'square-payment-form',
             'errorClass' => 'square-payment-form-errors',
             'square' => [
                 'applicationId' => Craft::parseEnv($this->appId),
-                'autoBuild' => false,
                 'locationId' => Craft::parseEnv($this->locationId),
             ],
-            'verification' => [],
+            'verificationDetails' => [
+                'amount' => number_format($order->totalPrice, 2),
+                'billingContact' => $this->getBillingContactForUser($user),
+                'currencyCode' => $order->paymentCurrency ?? $order->currency,
+            ],
         ], $params);
 
         $view = Craft::$app->getView();
@@ -374,6 +274,16 @@ class SquareGateway extends Gateway
         $view->setTemplateMode($previousMode);
 
         return $html;
+    }
+
+    /**
+     * @param array $params
+     *
+     * @return string|null
+     */
+    public function getVerificationFormHtml(array $params): ? string
+    {
+        // TODO: Implement getVerificationFormHtml() method.
     }
 
     /**
@@ -505,5 +415,159 @@ class SquareGateway extends Gateway
     public function supportsWebhooks(): bool
     {
         return true;
+    }
+
+    /**
+     * @param int $userId
+     *
+     * @return \craft\commerce\square\models\SquareCustomer|null
+     * @throws \craft\errors\ElementNotFoundException
+     */
+    public function createCustomer(int $userId): ?SquareCustomer
+    {
+        $user = Craft::$app->getUsers()->getUserById($userId);
+
+        if ($user === null) {
+            throw new ElementNotFoundException("No user exists with the ID '{$userId}'");
+        }
+
+        $request = new CreateCustomerRequest();
+        $request->setGivenName($user->firstName);
+        $request->setFamilyName($user->lastName);
+        $request->setEmailAddress($user->email);
+
+        try {
+            $customersApi = new CustomersApi($this->getClient());
+            $response = $customersApi->createCustomer($request);
+        } catch (ApiException $exception) {
+            return null;
+        }
+
+        $squareCustomer = new SquareCustomer();
+        $squareCustomer->userId = $user->id;
+        $squareCustomer->gatewayId = $this->id;
+        $squareCustomer->reference = $response->getCustomer()->getId();
+        $squareCustomer->response = ObjectSerializer::sanitizeForSerialization($response);
+
+        return $squareCustomer;
+    }
+
+    /**
+     * @param \craft\commerce\models\Transaction              $transaction
+     * @param \craft\commerce\models\payments\BasePaymentForm $form
+     * @param bool                                            $autocomplete
+     *
+     * @return \craft\commerce\base\RequestResponseInterface
+     */
+    protected function authorizeOrPurchase(Transaction $transaction, BasePaymentForm $form, bool $autocomplete = true): RequestResponseInterface
+    {
+        /** @var \craft\commerce\square\models\SquarePaymentForm $form */
+
+        $amount = $this->getAmountMoney($transaction);
+
+        // Fallback to newly created payment source verification token
+        $verificationToken = $form->verificationToken ?? $this->paymentSourceVerificationToken;
+
+        $request = new CreatePaymentRequest();
+        $request->setAmountMoney($amount);
+        $request->setAutocomplete($autocomplete);
+        $request->setCustomerId($form->customerReference);
+        $request->setIdempotencyKey($transaction->hash);
+        $request->setLocationId($this->getLocationId());
+        $request->setSourceId($form->nonce);
+        $request->setVerificationToken($verificationToken);
+
+        // Unset the payment source verification token to prevent misuse
+        $this->paymentSourceVerificationToken = null;
+
+        try {
+            $payments = new PaymentsApi($this->getClient());
+            $response = $payments->createPayment($request);
+
+            return new SquareRequestResponse($response);
+        } catch (ApiException $exception) {
+            return new SquareRequestResponse($exception);
+        }
+    }
+
+    /**
+     * @param \craft\commerce\models\Transaction $transaction
+     *
+     * @return \SquareConnect\Model\Money
+     */
+    protected function getAmountMoney(Transaction $transaction): Money
+    {
+        $currency = Commerce::getInstance()->getCurrencies()
+            ->getCurrencyByIso($transaction->paymentCurrency);
+
+        $amount = $transaction->paymentAmount * (10 ** $currency->minorUnit);
+
+        $money = new Money();
+        $money->setAmount($amount);
+        $money->setCurrency($currency->alphabeticCode);
+
+        return $money;
+    }
+
+    /**
+     * @param \craft\elements\User $user
+     *
+     * @return array
+     */
+    protected function getBillingContactForUser(User $user): array
+    {
+        $billingContact = [];
+
+        $customer = Commerce::getInstance()->getCustomers()
+            ->getCustomerByUserId($user->id);
+
+        if ($customer && $address = $customer->getPrimaryBillingAddress()) {
+            $billingContact = array_merge($billingContact, [
+                'givenName' => $address->firstName,
+                'familyName' => $address->lastName,
+                'addressLines' => array_filter([
+                    $address->address1,
+                    $address->address2,
+                    $address->address3,
+                ]),
+                'city' => $address->city,
+                'postalCode' => $address->zipCode,
+                'country' => $address->getCountry()->iso,
+            ]);
+        }
+
+        return array_merge($billingContact, [
+            'givenName' => $user->firstName,
+            'familyName' => $user->lastName,
+        ]);
+    }
+
+    /**
+     * @return \SquareConnect\ApiClient
+     */
+    protected function getClient(): ApiClient
+    {
+        if ($this->client !== null) {
+            return $this->client;
+        }
+
+        $config = new Configuration();
+        $config->setAccessToken(Craft::parseEnv($this->accessToken));
+
+        if ($this->testMode) {
+            $config->setHost('https://connect.squareupsandbox.com');
+        } else {
+            $config->setHost('https://connect.squareup.com');
+        }
+
+        return $this->client = new ApiClient($config);
+    }
+
+    /**
+     * @return string
+     */
+    protected function getLocationId(): string
+    {
+        return Craft::parseEnv($this->locationId);
     }
 }

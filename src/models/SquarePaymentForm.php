@@ -4,7 +4,7 @@ namespace craft\commerce\square\models;
 
 use craft\commerce\models\payments\CreditCardPaymentForm;
 use craft\commerce\models\PaymentSource;
-use craft\commerce\square\Plugin;
+use craft\commerce\square\Plugin as Square;
 
 /**
  * Class SquarePaymentForm
@@ -65,7 +65,7 @@ class SquarePaymentForm extends CreditCardPaymentForm
         /** @var \craft\commerce\square\gateways\SquareGateway $gateway */
         $gateway = $paymentSource->getGateway();
 
-        $customer = Plugin::getInstance()->getSquareCustomers()
+        $customer = Square::getInstance()->getSquareCustomers()
             ->getOrCreateSquareCustomer($gateway, $paymentSource->userId);
 
         $this->customerReference = $customer->reference;
@@ -77,9 +77,7 @@ class SquarePaymentForm extends CreditCardPaymentForm
     public function rules(): array
     {
         return [
-            [
-                ['token'], 'required',
-            ],
+            [['nonce'], 'required'],
         ];
     }
 }

@@ -7,146 +7,112 @@ function initSquare() {
 
   function displayErrors($errors, errors) {
     $errors.html(
-      $.map(errors, function (error) {
+      '<ul>' + $.map(errors, function (error) {
         return '<li>' + error + '</li>'
-      })
+      }) + '</ul>'
     )
   }
 
   function getFormData($form) {
     return $form.serializeArray().reduce(function (object, item) {
       object[item.name] = item.value
+      return object
     }, {})
   }
 
   $('[data-square]').each(function () {
-    var $container = $(this),
-      params = $container.data('square'),
-      $form = $container.closest('form'),
-      $nonce = $form.find('[name="nonce"]'),
-      $verificationToken = $form.find('[name="verificationToken"]'),
-      $card = $('<div />').appendTo($container),
-      $errors = $('<ul />').addClass(params.errorClass).appendTo($container)
+    var $container = $(this)
 
+    // Get the parameters from the data attribute
+    var params = $container.data('square')
+
+    // Generate an ID for the card element
+    var id = 'sq-card-' + Math.random().toString(36).substring(7)
+
+    // Create a card element and append it to the container
+    $('<div />').prop('id', id).appendTo($container)
+
+    // Get the form and relevant fields
+    var $form = $container.closest('form')
+    var $nonce = $form.find('[name="nonce"]')
+    var $verificationToken = $form.find('[name="verificationToken"]')
+
+    // Create and append an errors container
+    var $errors = $('<div />').addClass(params.errorClass).appendTo($container)
+
+    // Create the Square Payment Form instance
+    // https://developer.squareup.com/docs/payment-form/payment-form-walkthrough
     // noinspection JSUnusedGlobalSymbols
     var paymentForm = new SqPaymentForm(
-      $.extend({
-        card: $card[0],
+      $.extend(params.square, {
+        autoBuild: false,
         callbacks: {
           cardNonceResponseReceived: function (errors, nonce) {
             if (errors) {
+              $form.data('processing', false)
               return displayErrors($errors, errors)
             }
 
             $nonce.val(nonce)
-          }
-        }
-      }, params.square)
+
+            if (params.verificationDetails) {
+              // Get form data
+              var formData = getFormData($form)
+
+              // Build verification details
+              var verificationDetails = $.extend({
+                intent: formData.savePaymentSource ? 'STORE' : 'CHARGE',
+              }, params.verificationDetails)
+
+              // Verification (SCA)
+              paymentForm.verifyBuyer(nonce, verificationDetails, function (errors, verificationResult) {
+                if (errors) {
+                  $form.data('processing', false)
+                  return displayErrors($errors, errors)
+                }
+
+                $verificationToken.val(verificationResult.token)
+
+                $form[0].submit()
+              })
+            } else {
+              // Just submit the form if we’re not verifying
+              $form[0].submit()
+            }
+          },
+        },
+        card: {
+          elementId: id,
+        },
+      })
     )
 
+    // Override the form submit event
     $form.on('submit', function (event) {
       event.preventDefault()
 
+      // Get the form data
       var formData = getFormData($form)
 
+      // Submit immediately if paymentSourceId is not empty
       if (formData.paymentSourceId) {
-        return $form.submit()
+        $form[0].submit()
+
+        return
       }
 
       if ($form.data('processing')) {
         return false
       }
-
       $form.data('processing', true)
 
+      // Request a nonce from Square
       paymentForm.requestCardNonce()
-
-      paymentForm.verifyBuyer(
-        nonce,
-        params.verification,
-        function (errors, verificationResult) {
-          if (errors) {
-            return displayErrors($errors, errors)
-          }
-
-          $verificationToken.val(verificationResult.token)
-
-          $form.submit()
-        }
-      )
     })
 
+    // Render the Square Payment Form
     paymentForm.build()
   })
-
-  /**
-   * @param element HTMLElement
-   * @param errors Array
-   */
-  function outputErrors(element, errors) {
-    element.innerHTML = errors
-      .map(function (error) {
-        return '<li>' + error.message + '</li>'
-      })
-      .join('')
-  }
-
-  // var containerElements = document.querySelectorAll('.square-payment-form-container'), i
-  //
-  // for (i = 0; i < containerElements.length; i++) {
-  //   var containerElement = containerElements[i]
-  //   var paymentForm
-  //   var params = JSON.parse(containerElement.getAttribute('data-params'))
-  //
-  //   /** @type HTMLFormElement */
-  //   var formElement = containerElement.closest('form')
-  //
-  //   var errorsElement = containerElement.querySelector('.square-payment-form-errors')
-  //
-  //   if (!params.callbacks) {
-  //     params.callbacks = {}
-  //   }
-  //
-  //   params.callbacks.cardNonceResponseReceived = function (errors, nonce, cardData) {
-  //     if (errors) {
-  //       return outputErrors(errorsElement, errors)
-  //     }
-  //
-  //     /** @type HTMLInputElement */
-  //     var cardNonce = containerElement.querySelector('input[name="token"]')
-  //     cardNonce.value = nonce
-  //
-  //     var verificationDetails = JSON.parse(containerElement.getAttribute('data-verificationDetails'))
-  //
-  //     paymentForm.verifyBuyer(
-  //       nonce,
-  //       verificationDetails,
-  //       function (errors, verificationResult) {
-  //         if (errors) {
-  //           return outputErrors(errorsElement, errors)
-  //         }
-  //
-  //         /** @type HTMLInputElement */
-  //         var verificationTokenEl = containerElement.querySelector('input[name="verificationToken"]')
-  //         verificationTokenEl.value = verificationResult.token
-  //
-  //         formElement.submit()
-  //       }
-  //     )
-  //   }
-  //
-  //   paymentForm = new SqPaymentForm(params)
-  //
-  //   formElement.addEventListener('submit', function (event) {
-  //     var formData = new FormData(formElement)
-  //     if (!formData.get('paymentSourceId')) {
-  //       event.preventDefault()
-  //       paymentForm.requestCardNonce()
-  //     }
-  //   })
-  //
-  //   paymentForm.build()
-  // }
 }
 
 initSquare()
