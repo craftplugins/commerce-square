@@ -5,6 +5,7 @@ namespace craft\commerce\square\gateways;
 use Craft;
 use craft\commerce\base\Gateway;
 use craft\commerce\base\RequestResponseInterface;
+use craft\commerce\elements\Order;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
 use craft\commerce\models\Transaction;
@@ -119,6 +120,8 @@ class SquareGateway extends Gateway
 
             return new SquareRequestResponse($response);
         } catch (ApiException $exception) {
+            Craft::error($exception->getMessage(), 'commerce-square');
+
             return new SquareRequestResponse($exception);
         }
     }
@@ -179,6 +182,8 @@ class SquareGateway extends Gateway
             $customersApi = new CustomersApi($this->getClient());
             $response = $customersApi->createCustomerCard($squareCustomer->reference, $request);
         } catch (ApiException $exception) {
+            Craft::error($exception->getMessage(), 'commerce-square');
+
             return null;
         }
 
@@ -223,6 +228,8 @@ class SquareGateway extends Gateway
             $squareCustomers = new CustomersApi($this->getClient());
             $squareCustomers->deleteCustomerCard($squareCustomer->reference, $token);
         } catch (ApiException $exception) {
+            Craft::error($exception->getMessage(), 'commerce-square');
+
             return false;
         }
 
@@ -242,20 +249,12 @@ class SquareGateway extends Gateway
      */
     public function getPaymentFormHtml(array $params): ?string
     {
-        $order = Commerce::getInstance()->getCarts()->getCart(true);
-        $user = Craft::$app->getUser()->getIdentity();
-
         $params = array_replace_recursive([
             'containerClass' => 'square-payment-form',
             'errorClass' => 'square-payment-form-errors',
             'square' => [
                 'applicationId' => Craft::parseEnv($this->appId),
                 'locationId' => Craft::parseEnv($this->locationId),
-            ],
-            'verificationDetails' => [
-                'amount' => number_format($order->totalPrice, 2),
-                'billingContact' => $this->getBillingContactForUser($user),
-                'currencyCode' => $order->paymentCurrency ?? $order->currency,
             ],
         ], $params);
 
@@ -274,16 +273,6 @@ class SquareGateway extends Gateway
         $view->setTemplateMode($previousMode);
 
         return $html;
-    }
-
-    /**
-     * @param array $params
-     *
-     * @return string|null
-     */
-    public function getVerificationFormHtml(array $params): ? string
-    {
-        // TODO: Implement getVerificationFormHtml() method.
     }
 
     /**
@@ -341,6 +330,8 @@ class SquareGateway extends Gateway
 
             return new SquareRequestResponse($response);
         } catch (ApiException $exception) {
+            Craft::error($exception->getMessage(), 'commerce-square');
+
             return new SquareRequestResponse($exception);
         }
     }
@@ -440,6 +431,8 @@ class SquareGateway extends Gateway
             $customersApi = new CustomersApi($this->getClient());
             $response = $customersApi->createCustomer($request);
         } catch (ApiException $exception) {
+            Craft::error($exception->getMessage(), 'commerce-square');
+
             return null;
         }
 
@@ -450,6 +443,57 @@ class SquareGateway extends Gateway
         $squareCustomer->response = ObjectSerializer::sanitizeForSerialization($response);
 
         return $squareCustomer;
+    }
+
+    /**
+     * @param \craft\commerce\elements\Order $order
+     * @param \craft\elements\User|null      $user
+     *
+     * @return array
+     */
+    public function getVerificationDetails(Order $order, User $user = null): array
+    {
+        $verificationDetails = [];
+
+        if ($order) {
+            $verificationDetails['amount'] = number_format($order->getTotalPrice(), 2);
+            $verificationDetails['currency'] = $order->paymentCurrency;
+        }
+
+        $customers = Commerce::getInstance()->getCustomers();
+
+        if ($user !== null) {
+            $customer = $customers->getCustomerByUserId($user->id);
+        } else {
+            $customer = $customers->getCustomer();
+        }
+
+        if ($customer !== null && $address = $customer->getPrimaryBillingAddress()) {
+            $verificationDetails['billingContact']['givenName'] = $address->firstName ?? $user->firstName;
+            $verificationDetails['billingContact']['familyName'] = $address->lastName ?? $user->lastName;
+
+            $verificationDetails['billingContact']['addressLines'] = array_filter([
+                $address->address1,
+                $address->address2,
+                $address->address3,
+            ]);
+
+            $verificationDetails['billingContact']['city'] = $address->city;
+            $verificationDetails['billingContact']['postalCode'] = $address->zipCode;
+            $verificationDetails['billingContact']['country'] = $address->getCountry()->iso;
+        }
+
+        return $verificationDetails;
+    }
+
+    /**
+     * @param array $params
+     *
+     * @return string|null
+     */
+    public function getVerificationFormHtml(array $params): ?string
+    {
+        // TODO: Implement getVerificationFormHtml() method.
     }
 
     /**

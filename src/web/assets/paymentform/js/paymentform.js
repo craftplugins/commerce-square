@@ -56,16 +56,8 @@ function initSquare() {
             $nonce.val(nonce)
 
             if (params.verificationDetails) {
-              // Get form data
-              var formData = getFormData($form)
-
-              // Build verification details
-              var verificationDetails = $.extend({
-                intent: formData.savePaymentSource ? 'STORE' : 'CHARGE',
-              }, params.verificationDetails)
-
               // Verification (SCA)
-              paymentForm.verifyBuyer(nonce, verificationDetails, function (errors, verificationResult) {
+              paymentForm.verifyBuyer(nonce, params.verificationDetails, function (errors, verificationResult) {
                 if (errors) {
                   $form.data('processing', false)
                   return displayErrors($errors, errors)
@@ -79,27 +71,17 @@ function initSquare() {
               // Just submit the form if we’re not verifying
               $form[0].submit()
             }
-          },
+          }
         },
         card: {
-          elementId: id,
-        },
+          elementId: id
+        }
       })
     )
 
     // Override the form submit event
     $form.on('submit', function (event) {
       event.preventDefault()
-
-      // Get the form data
-      var formData = getFormData($form)
-
-      // Submit immediately if paymentSourceId is not empty
-      if (formData.paymentSourceId) {
-        $form[0].submit()
-
-        return
-      }
 
       if ($form.data('processing')) {
         return false
