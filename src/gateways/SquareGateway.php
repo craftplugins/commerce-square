@@ -173,7 +173,7 @@ class SquareGateway extends Gateway
             $billingAddress->setAddressLine3($primaryBillingAddress->address3);
             $billingAddress->setPostalCode($primaryBillingAddress->zipCode);
             $billingAddress->setLocality($primaryBillingAddress->stateName);
-            $billingAddress->setCountry($primaryBillingAddress->country);
+            $billingAddress->setCountry($primaryBillingAddress->getCountryIso());
 
             $request->setBillingAddress($billingAddress);
         }
