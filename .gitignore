@@ -5,4 +5,5 @@
 *.orig
 *Thumbs.db
 composer.lock
-vendor/
+node_modules
+vendor
