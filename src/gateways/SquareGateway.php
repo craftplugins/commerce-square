@@ -77,11 +77,11 @@ class SquareGateway extends Gateway
     /**
      * @inheritDoc
      */
-    public function init()
+    public function init(): void
     {
         parent::init();
 
-        Event::on(User::class, User::EVENT_BEFORE_DELETE, static function (
+        Event::on(User::class, User::EVENT_BEFORE_DELETE, function (
             ModelEvent $event
         ) {
             /** @var User $user */

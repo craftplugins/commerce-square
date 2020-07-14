@@ -19,7 +19,7 @@ class Plugin extends \craft\base\Plugin
     /**
      * @inheritDoc
      */
-    public function init()
+    public function init(): void
     {
         parent::init();
 
