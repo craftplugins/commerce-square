@@ -58,14 +58,16 @@ class SquarePaymentForm extends CreditCardPaymentForm
      * @throws \yii\base\InvalidConfigException
      * @throws \craft\errors\ElementNotFoundException
      */
-    public function populateFromPaymentSource(PaymentSource $paymentSource): void
-    {
+    public function populateFromPaymentSource(
+        PaymentSource $paymentSource
+    ): void {
         $this->nonce = $paymentSource->token;
 
         /** @var \craft\commerce\square\gateways\SquareGateway $gateway */
         $gateway = $paymentSource->getGateway();
 
-        $customer = Square::getInstance()->getSquareCustomers()
+        $customer = Square::getInstance()
+            ->getSquareCustomers()
             ->getOrCreateSquareCustomer($gateway, $paymentSource->userId);
 
         $this->customerReference = $customer->reference;
@@ -76,8 +78,6 @@ class SquarePaymentForm extends CreditCardPaymentForm
      */
     public function rules(): array
     {
-        return [
-            [['nonce'], 'required'],
-        ];
+        return [[['nonce'], 'required']];
     }
 }

@@ -26,8 +26,10 @@ class SquareCustomers extends Component
      * @throws \Throwable
      * @throws \yii\db\StaleObjectException
      */
-    public function deleteSquareCustomer(SquareGateway $gateway, int $userId): bool
-    {
+    public function deleteSquareCustomer(
+        SquareGateway $gateway,
+        int $userId
+    ): bool {
         /** @var SquareCustomerRecord|null $record */
         $record = $this->getSquareCustomerQuery()
             ->where([
@@ -47,34 +49,13 @@ class SquareCustomers extends Component
      * @param \craft\commerce\square\gateways\SquareGateway $gateway
      * @param int                                           $userId
      *
-     * @return \craft\commerce\square\models\SquareCustomer|null
-     */
-    public function getSquareCustomer(SquareGateway $gateway, int $userId):?SquareCustomer
-    {
-        /** @var SquareCustomerRecord|null $record */
-        $record = $this->getSquareCustomerQuery()
-            ->where([
-                'gatewayId' => $gateway->id,
-                'userId' => $userId,
-            ])
-            ->one();
-
-        if ($record === null) {
-            return null;
-        }
-
-        return new SquareCustomer($record);
-    }
-
-    /**
-     * @param \craft\commerce\square\gateways\SquareGateway $gateway
-     * @param int                                           $userId
-     *
      * @return \craft\commerce\square\models\SquareCustomer
      * @throws \craft\errors\ElementNotFoundException
      */
-    public function getOrCreateSquareCustomer(SquareGateway $gateway, int $userId): SquareCustomer
-    {
+    public function getOrCreateSquareCustomer(
+        SquareGateway $gateway,
+        int $userId
+    ): SquareCustomer {
         if ($squareCustomer = $this->getSquareCustomer($gateway, $userId)) {
             return $squareCustomer;
         }
@@ -92,6 +73,31 @@ class SquareCustomers extends Component
     }
 
     /**
+     * @param \craft\commerce\square\gateways\SquareGateway $gateway
+     * @param int                                           $userId
+     *
+     * @return \craft\commerce\square\models\SquareCustomer|null
+     */
+    public function getSquareCustomer(
+        SquareGateway $gateway,
+        int $userId
+    ): ?SquareCustomer {
+        /** @var SquareCustomerRecord|null $record */
+        $record = $this->getSquareCustomerQuery()
+            ->where([
+                'gatewayId' => $gateway->id,
+                'userId' => $userId,
+            ])
+            ->one();
+
+        if ($record === null) {
+            return null;
+        }
+
+        return new SquareCustomer($record);
+    }
+
+    /**
      * @param \craft\commerce\square\models\SquareCustomer $customer
      *
      * @return bool
@@ -103,7 +109,9 @@ class SquareCustomers extends Component
             $record = SquareCustomerRecord::findOne($customer->id);
 
             if (!$record) {
-                throw new ElementNotFoundException("No Square Customer exists with the ID '{$customer->id}'");
+                throw new ElementNotFoundException(
+                    "No Square Customer exists with the ID '{$customer->id}'"
+                );
             }
         } else {
             $record = new SquareCustomerRecord();
@@ -133,13 +141,7 @@ class SquareCustomers extends Component
     protected function getSquareCustomerQuery(): Query
     {
         return (new Query())
-            ->select([
-                'id',
-                'gatewayId',
-                'userId',
-                'reference',
-                'response',
-            ])
+            ->select(['id', 'gatewayId', 'userId', 'reference', 'response'])
             ->from(SquareCustomerRecord::tableName());
     }
 }

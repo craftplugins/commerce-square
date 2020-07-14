@@ -65,7 +65,8 @@ class SquareCustomer extends Model
     public function getGateway(): SquareGateway
     {
         if ($this->gateway === null) {
-            $this->gateway = Commerce::getInstance()->getGateways()
+            $this->gateway = Commerce::getInstance()
+                ->getGateways()
                 ->getGatewayById($this->gatewayId);
         }
 
@@ -90,7 +91,12 @@ class SquareCustomer extends Model
     public function rules(): array
     {
         return [
-            [['reference'], 'unique', 'targetAttribute' => ['gatewayId', 'reference'], 'targetClass' => CustomerRecord::class],
+            [
+                ['reference'],
+                'unique',
+                'targetAttribute' => ['gatewayId', 'reference'],
+                'targetClass' => CustomerRecord::class,
+            ],
             [['gatewayId', 'userId', 'reference', 'response'], 'required'],
         ];
     }
