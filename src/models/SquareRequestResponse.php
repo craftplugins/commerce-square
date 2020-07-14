@@ -49,7 +49,9 @@ class SquareRequestResponse implements RequestResponseInterface
     public function getData()
     {
         if ($this->response instanceof ApiException) {
-            return ObjectSerializer::sanitizeForSerialization($this->response->getResponseObject());
+            return ObjectSerializer::sanitizeForSerialization(
+                $this->response->getResponseObject()
+            );
         }
 
         return ObjectSerializer::sanitizeForSerialization($this->response);
@@ -133,11 +135,17 @@ class SquareRequestResponse implements RequestResponseInterface
     public function isSuccessful(): bool
     {
         if ($this->response instanceof CreatePaymentResponse) {
-            return in_array($this->response->getPayment()->getStatus(), ['APPROVED', 'COMPLETED']);
+            return in_array($this->response->getPayment()->getStatus(), [
+                'APPROVED',
+                'COMPLETED',
+            ]);
         }
 
         if ($this->response instanceof RefundPaymentResponse) {
-            return in_array($this->response->getPayment()->getStatus(), ['PENDING', 'COMPLETED']);
+            return in_array($this->response->getPayment()->getStatus(), [
+                'PENDING',
+                'COMPLETED',
+            ]);
         }
 
         return false;
@@ -148,6 +156,8 @@ class SquareRequestResponse implements RequestResponseInterface
      */
     public function redirect()
     {
-        throw new NotImplementedException('Redirecting directly is not implemented for this gateway.');
+        throw new NotImplementedException(
+            'Redirecting directly is not implemented for this gateway.'
+        );
     }
 }
