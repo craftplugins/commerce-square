@@ -1,18 +1,18 @@
 <?php
 
-namespace craft\commerce\square\models;
+namespace craftplugins\square\models;
 
 use Craft;
 use craft\commerce\base\Model;
 use craft\commerce\Plugin as Commerce;
-use craft\commerce\square\gateways\SquareGateway;
-use craft\commerce\square\records\SquareCustomer as CustomerRecord;
+use craftplugins\square\gateways\SquareGateway;
+use craftplugins\square\records\SquareCustomerRecord as CustomerRecord;
 use craft\elements\User;
 
 /**
  * Class SquareCustomer
  *
- * @package craft\commerce\square\models
+ * @package craftplugin\square\models
  */
 class SquareCustomer extends Model
 {

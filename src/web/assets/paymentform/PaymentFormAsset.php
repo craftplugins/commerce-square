@@ -1,6 +1,6 @@
 <?php
 
-namespace craft\commerce\square\web\assets;
+namespace craftplugins\square\web\assets;
 
 use craft\web\AssetBundle;
 use yii\web\JqueryAsset;
@@ -8,24 +8,20 @@ use yii\web\JqueryAsset;
 /**
  * Class PaymentFormAsset
  *
- * @package craft\commerce\square\web\assets
+ * @package craftplugins\square\web\assets
  */
 class PaymentFormAsset extends AssetBundle
 {
     /**
      * @inheritDoc
      */
-    public function init()
+    public function init(): void
     {
         $this->sourcePath = __DIR__;
 
-        $this->js = [
-            'js/paymentform.js',
-        ];
+        $this->js = ['js/paymentform.js'];
 
-        $this->depends = [
-            JqueryAsset::class,
-        ];
+        $this->depends = [JqueryAsset::class];
 
         parent::init();
     }

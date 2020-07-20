@@ -1,18 +1,18 @@
 <?php
 
-namespace craft\commerce\square;
+namespace craftplugins\square;
 
 use craft\commerce\services\Gateways;
-use craft\commerce\square\gateways\SquareGateway;
-use craft\commerce\square\services\SquareCustomers;
 use craft\events\RegisterComponentTypesEvent;
+use craftplugins\square\gateways\SquareGateway;
+use craftplugins\square\services\SquareCustomers;
 use yii\base\Event;
 
 /**
  * Class Plugin
  *
- * @package craft\commerce\square
- * @property \craft\commerce\square\services\SquareCustomers $squareCustomers
+ * @package craftplugins\square
+ * @property \craftplugins\square\services\SquareCustomers $squareCustomers
  */
 class Plugin extends \craft\base\Plugin
 {
@@ -38,7 +38,7 @@ class Plugin extends \craft\base\Plugin
     }
 
     /**
-     * @return \craft\commerce\square\services\SquareCustomers
+     * @return \craftplugins\square\services\SquareCustomers
      * @throws \yii\base\InvalidConfigException
      */
     public function getSquareCustomers(): SquareCustomers

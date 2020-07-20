@@ -1,11 +1,11 @@
-{% from "_includes/forms" import textField, lightswitchField, selectField, autosuggestField %}
+{% from '_includes/forms' import textField, lightswitchField, selectField, autosuggestField %}
 
 <a href="https://developer.squareup.com/apps" class="btn" target="_blank">
   Manage Square Applications
 </a>
 
 {{ autosuggestField({
-  label: 'App ID'|t('commerce'),
+  label: 'Application ID'|t('square'),
   id: 'appId',
   class: 'ltr',
   name: 'appId',
@@ -15,7 +15,7 @@
 }) }}
 
 {{ autosuggestField({
-  label: 'Access Token'|t('commerce'),
+  label: 'Access Token'|t('square'),
   id: 'accessToken',
   class: 'ltr',
   name: 'accessToken',
@@ -36,7 +36,7 @@
 }) }}
 
 {{ lightswitchField({
-  label: "Test mode?"|t('commerce'),
+  label: 'Test mode'|t('square'),
   name: 'testMode',
   on: gateway.testMode,
   errors: gateway.getErrors('testMode'),

@@ -4,6 +4,7 @@ namespace craft\commerce\square\models;
 
 use craft\commerce\base\RequestResponseInterface;
 use craft\commerce\errors\NotImplementedException;
+use Square\Http\ApiResponse;
 use SquareConnect\ApiException;
 use SquareConnect\Model\CreatePaymentResponse;
 use SquareConnect\Model\RefundPaymentResponse;

@@ -1,6 +1,6 @@
 <?php
 
-namespace craft\commerce\square\migrations;
+namespace craftplugins\square\migrations;
 
 use craft\db\Migration;
 use craft\helpers\MigrationHelper;
@@ -8,7 +8,7 @@ use craft\helpers\MigrationHelper;
 /**
  * Class Install
  *
- * @package craft\commerce\square\migrations
+ * @package craftplugins\square\migrations
  */
 class Install extends Migration
 {

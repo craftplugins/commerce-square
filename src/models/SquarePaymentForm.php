@@ -4,7 +4,7 @@ namespace craft\commerce\square\models;
 
 use craft\commerce\models\payments\CreditCardPaymentForm;
 use craft\commerce\models\PaymentSource;
-use craft\commerce\square\Plugin as Square;
+use craftplugins\square\Plugin;
 
 /**
  * Class SquarePaymentForm
@@ -55,18 +55,19 @@ class SquarePaymentForm extends CreditCardPaymentForm
     /**
      * @param \craft\commerce\models\PaymentSource $paymentSource
      *
-     * @throws \yii\base\InvalidConfigException
      * @throws \craft\errors\ElementNotFoundException
+     * @throws \craftplugins\square\errors\SquareCustomerException
+     * @throws \yii\base\InvalidConfigException
      */
     public function populateFromPaymentSource(
         PaymentSource $paymentSource
     ): void {
         $this->nonce = $paymentSource->token;
 
-        /** @var \craft\commerce\square\gateways\SquareGateway $gateway */
+        /** @var \craftplugins\square\gateways\SquareGateway $gateway */
         $gateway = $paymentSource->getGateway();
 
-        $customer = Square::getInstance()
+        $customer = Plugin::getInstance()
             ->getSquareCustomers()
             ->getOrCreateSquareCustomer($gateway, $paymentSource->userId);
 

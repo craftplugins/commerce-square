@@ -1,26 +1,46 @@
 <?php
 
-namespace craft\commerce\square\records;
+namespace craftplugins\square\records;
 
-use craft\commerce\square\gateways\SquareGateway;
 use craft\db\ActiveRecord;
 use craft\elements\User;
+use craftplugins\square\gateways\SquareGateway;
 use yii\db\ActiveQueryInterface;
 
 /**
- * Class SquareCustomer
+ * Class SquareCustomerRecord
  *
- * @property \yii\db\ActiveQueryInterface $gateway
- * @property string                       $gatewayId
- * @property int                          $id
- * @property string                       $reference
- * @property string                       $response
+ * @package craftplugins\square\records
  * @property \yii\db\ActiveQueryInterface $user
- * @property int                          $userId
- * @package craft\commerce\square\records
+ * @property \yii\db\ActiveQueryInterface $gateway
  */
-class SquareCustomer extends ActiveRecord
+class SquareCustomerRecord extends ActiveRecord
 {
+    /**
+     * @var string
+     */
+    public $gatewayId;
+
+    /**
+     * @var int
+     */
+    public $id;
+
+    /**
+     * @var string
+     */
+    public $reference;
+
+    /**
+     * @var mixed
+     */
+    public $response;
+
+    /**
+     * @var string
+     */
+    public $userId;
+
     /**
      * @return string
      */

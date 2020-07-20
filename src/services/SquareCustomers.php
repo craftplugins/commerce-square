@@ -1,14 +1,14 @@
 <?php
 
-namespace craft\commerce\square\services;
+namespace craftplugins\square\services;
 
-use Craft;
 use craft\base\Component;
-use craft\commerce\square\gateways\SquareGateway;
-use craft\commerce\square\models\SquareCustomer;
-use craft\commerce\square\records\SquareCustomer as SquareCustomerRecord;
 use craft\db\Query;
 use craft\errors\ElementNotFoundException;
+use craftplugins\square\errors\SquareCustomerException;
+use craftplugins\square\gateways\SquareGateway;
+use craftplugins\square\models\SquareCustomer;
+use craftplugins\square\records\SquareCustomerRecord;
 
 /**
  * Class SquareCustomers
@@ -19,8 +19,8 @@ use craft\errors\ElementNotFoundException;
 class SquareCustomers extends Component
 {
     /**
-     * @param \craft\commerce\square\gateways\SquareGateway $gateway
-     * @param int                                           $userId
+     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param int                                         $userId
      *
      * @return bool
      * @throws \Throwable
@@ -46,11 +46,12 @@ class SquareCustomers extends Component
     }
 
     /**
-     * @param \craft\commerce\square\gateways\SquareGateway $gateway
-     * @param int                                           $userId
+     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param int                                         $userId
      *
-     * @return \craft\commerce\square\models\SquareCustomer
+     * @return \craftplugins\square\models\SquareCustomer
      * @throws \craft\errors\ElementNotFoundException
+     * @throws \craftplugins\square\errors\SquareCustomerException
      */
     public function getOrCreateSquareCustomer(
         SquareGateway $gateway,
@@ -63,20 +64,17 @@ class SquareCustomers extends Component
         $squareCustomer = $gateway->createCustomer($userId);
 
         if (!$this->saveSquareCustomer($squareCustomer)) {
-            $errors = implode(', ', $squareCustomer->getErrorSummary(true));
-            Craft::error($errors, 'commerce-square');
-
-            return null;
+            throw new SquareCustomerException('Error saving Square Customer');
         }
 
         return $squareCustomer;
     }
 
     /**
-     * @param \craft\commerce\square\gateways\SquareGateway $gateway
-     * @param int                                           $userId
+     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param int                                         $userId
      *
-     * @return \craft\commerce\square\models\SquareCustomer|null
+     * @return \craftplugins\square\models\SquareCustomer|null
      */
     public function getSquareCustomer(
         SquareGateway $gateway,
@@ -98,7 +96,7 @@ class SquareCustomers extends Component
     }
 
     /**
-     * @param \craft\commerce\square\models\SquareCustomer $customer
+     * @param \craftplugins\square\models\SquareCustomer $customer
      *
      * @return bool
      * @throws \craft\errors\ElementNotFoundException
@@ -110,7 +108,7 @@ class SquareCustomers extends Component
 
             if (!$record) {
                 throw new ElementNotFoundException(
-                    "No Square Customer exists with the ID '{$customer->id}'"
+                    "Invalid Square Customer ID: {$customer->id}"
                 );
             }
         } else {
