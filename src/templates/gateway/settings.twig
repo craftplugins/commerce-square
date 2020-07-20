@@ -6,12 +6,12 @@
 
 {{ autosuggestField({
   label: 'Application ID'|t('square'),
-  id: 'appId',
+  id: 'applicationId',
   class: 'ltr',
-  name: 'appId',
+  name: 'applicationId',
   suggestEnvVars: true,
-  value: gateway.appId,
-  errors: gateway.getErrors('appId')
+  value: gateway.applicationId,
+  errors: gateway.getErrors('applicationId')
 }) }}
 
 {{ autosuggestField({
