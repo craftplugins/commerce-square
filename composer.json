@@ -1,6 +1,6 @@
 {
   "name": "craftplugins/square",
-  "description": "Square payment gateway plugin for Craft Commerce 2",
+  "description": "Square payment gateway plugin for Craft Commerce",
   "version": "0.1.0",
   "type": "craft-plugin",
   "keywords": [
