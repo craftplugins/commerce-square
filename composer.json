@@ -20,7 +20,7 @@
   },
   "autoload": {
     "psr-4": {
-      "craftplugins\\square\\errors": "src/"
+      "craftplugins\\square\\": "src/"
     }
   },
   "extra": {
