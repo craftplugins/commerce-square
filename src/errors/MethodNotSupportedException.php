@@ -7,7 +7,10 @@ namespace craftplugins\square\errors;
  *
  * @package craftplugins\square\errors
  */
-class MethodNotSupportedException extends Exception
+class MethodNotSupportedException extends SquareException
 {
+    /**
+     * @var string
+     */
     protected $message = 'Method is not supported';
 }

@@ -6,21 +6,26 @@ use Craft;
 use craft\commerce\base\Gateway;
 use craft\commerce\base\RequestResponseInterface;
 use craft\commerce\elements\Order;
+use craft\commerce\models\Address;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
 use craft\commerce\models\Transaction;
 use craft\commerce\Plugin as Commerce;
 use craft\commerce\records\PaymentSource as PaymentSourceRecord;
-use craft\commerce\square\models\SquarePaymentForm;
-use craft\commerce\square\models\SquareRequestResponse;
 use craft\elements\User;
 use craft\errors\ElementNotFoundException;
 use craft\events\ModelEvent;
+use craft\helpers\ArrayHelper;
 use craft\web\Response as WebResponse;
 use craft\web\View;
+use craftplugins\square\errors\SquareApiErrorException;
 use craftplugins\square\errors\MethodNotSupportedException;
-use craftplugins\square\errors\PaymentSourceException;
+use craftplugins\square\errors\SquareException;
+use craftplugins\square\errors\SquarePaymentSourceException;
 use craftplugins\square\models\SquareCustomer;
+use craftplugins\square\models\SquareErrorResponse;
+use craftplugins\square\models\SquarePaymentForm;
+use craftplugins\square\models\SquareResponse;
 use craftplugins\square\Plugin;
 use craftplugins\square\web\assets\PaymentFormAsset;
 use Square\Environment;
@@ -62,11 +67,6 @@ class SquareGateway extends Gateway
     public $testMode;
 
     /**
-     * @var string
-     */
-    protected $paymentSourceVerificationToken;
-
-    /**
      * @var SquareClient
      */
     protected $squareClient;
@@ -103,6 +103,7 @@ class SquareGateway extends Gateway
      * @param \craft\commerce\models\payments\BasePaymentForm $form
      *
      * @return \craft\commerce\base\RequestResponseInterface
+     * @throws \Square\Exceptions\ApiException
      */
     public function authorize(
         Transaction $transaction,
@@ -116,21 +117,20 @@ class SquareGateway extends Gateway
      * @param string                             $reference
      *
      * @return \craft\commerce\base\RequestResponseInterface
+     * @throws \Square\Exceptions\ApiException
      */
     public function capture(
         Transaction $transaction,
         string $reference
     ): RequestResponseInterface {
-        try {
-            $paymentsApi = $this->getSquareClient()->getPaymentsApi();
-            $apiResponse = $paymentsApi->completePayment($reference);
+        $paymentsApi = $this->getSquareClient()->getPaymentsApi();
+        $apiResponse = $paymentsApi->completePayment($reference);
 
-            return new SquareRequestResponse($apiResponse);
-        } catch (ApiException $exception) {
-            Craft::error($exception->getMessage(), 'square');
-
-            return new SquareRequestResponse($exception);
+        if ($apiResponse->isError()) {
+            return new SquareErrorResponse($apiResponse->getErrors());
         }
+
+        return new SquareResponse($apiResponse->getResult());
     }
 
     /**
@@ -161,7 +161,9 @@ class SquareGateway extends Gateway
      * @param int $userId
      *
      * @return \craftplugins\square\models\SquareCustomer|null
+     * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
+     * @throws \craftplugins\square\errors\SquareApiErrorException
      */
     public function createCustomer(int $userId): ?SquareCustomer
     {
@@ -172,49 +174,46 @@ class SquareGateway extends Gateway
         }
 
         $body = new CreateCustomerRequest();
-        $body->setReferenceId($user->id);
+        $body->setReferenceId($userId);
         $body->setGivenName($user->firstName);
         $body->setFamilyName($user->lastName);
         $body->setEmailAddress($user->email);
 
-        try {
-            $customersApi = $this->getSquareClient()->getCustomersApi();
-            $apiResponse = $customersApi->createCustomer($body);
+        $customersApi = $this->getSquareClient()->getCustomersApi();
+        $apiResponse = $customersApi->createCustomer($body);
 
-            /** @var \Square\Models\CreateCustomerResponse $createCustomerResponse */
-            $createCustomerResponse = $apiResponse->getResult();
-
-            $squareCustomer = new SquareCustomer();
-            $squareCustomer->response = $createCustomerResponse;
-            $squareCustomer->userId = $user->id;
-            $squareCustomer->gatewayId = $this->id;
-            $squareCustomer->reference = $createCustomerResponse
-                ->getCustomer()
-                ->getId();
-
-            return $squareCustomer;
-        } catch (ApiException $exception) {
-            Craft::error($exception->getMessage(), 'square');
-
-            return null;
+        if ($apiResponse->isError()) {
+            throw new SquareApiErrorException($apiResponse->getErrors());
         }
+
+        /** @var \Square\Models\CreateCustomerResponse $result */
+        $result = $apiResponse->getResult();
+
+        $squareCustomer = new SquareCustomer();
+        $squareCustomer->response = $result;
+        $squareCustomer->userId = $userId;
+        $squareCustomer->gatewayId = $this->id;
+        $squareCustomer->reference = $result->getCustomer()->getId();
+
+        return $squareCustomer;
     }
 
     /**
-     * @param \craft\commerce\models\payments\BasePaymentForm $sourceData
+     * @param \craft\commerce\models\payments\BasePaymentForm $paymentForm
      * @param int                                             $userId
      *
      * @return \craft\commerce\models\PaymentSource
+     * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
-     * @throws \craftplugins\square\errors\PaymentSourceException
-     * @throws \craftplugins\square\errors\SquareCustomerException
+     * @throws \craftplugins\square\errors\SquareApiErrorException
+     * @throws \craftplugins\square\errors\SquareException
      * @throws \yii\base\InvalidConfigException
      */
     public function createPaymentSource(
-        BasePaymentForm $sourceData,
+        BasePaymentForm $paymentForm,
         int $userId
     ): PaymentSource {
-        /** @var \craft\commerce\square\models\SquarePaymentForm $sourceData */
+        /** @var SquarePaymentForm $paymentForm */
 
         $user = Craft::$app->getUsers()->getUserById($userId);
 
@@ -222,53 +221,36 @@ class SquareGateway extends Gateway
             ->getSquareCustomers()
             ->getOrCreateSquareCustomer($this, $user->id);
 
-        // Save the verification token locally
-        $this->paymentSourceVerificationToken = $sourceData->verificationToken;
+        $body = new CreateCustomerCardRequest($paymentForm->nonce);
+        $body->setVerificationToken($paymentForm->verificationToken);
 
-        $body = new CreateCustomerCardRequest($sourceData->nonce);
-        $body->setVerificationToken($sourceData->verificationToken);
+        $customersApi = $this->getSquareClient()->getCustomersApi();
+        $apiResponse = $customersApi->createCustomerCard(
+            $squareCustomer->reference,
+            $body
+        );
 
-        // todo: Add $addressId to SquarePaymentForm - https://github.com/square/square-php-sdk/blob/master/doc/customers.md#create-customer-card
-        // $body->setCardholderName($sourceData->getCardholderName());
-        // if ($primaryBillingAddress = $customer->primaryBillingAddress) {
-        //     $billingAddress = new Address();
-        //     $billingAddress->setFirstName($primaryBillingAddress->firstName);
-        //     $billingAddress->setLastName($primaryBillingAddress->lastName);
-        //     $billingAddress->setAddressLine1($primaryBillingAddress->address1);
-        //     $billingAddress->setAddressLine2($primaryBillingAddress->address2);
-        //     $billingAddress->setAddressLine3($primaryBillingAddress->address3);
-        //     $billingAddress->setPostalCode($primaryBillingAddress->zipCode);
-        //     $billingAddress->setLocality($primaryBillingAddress->stateName);
-        //     $billingAddress->setCountry(
-        //         $primaryBillingAddress->getCountryIso()
-        //     );
-        //
-        //     $request->setBillingAddress($billingAddress);
-        // }
-
-        try {
-            $customersApi = $this->getSquareClient()->getCustomersApi();
-
-            /** @var \Square\Models\CreateCustomerCardResponse $apiResponse */
-            $apiResponse = $customersApi->createCustomerCard(
-                $squareCustomer->reference,
-                $body
-            );
-        } catch (ApiException $exception) {
-            throw new PaymentSourceException($exception->getMessage());
+        if ($apiResponse->isError()) {
+            throw new SquareApiErrorException($apiResponse->getErrors());
         }
 
-        $description = Craft::t('square', '{cardType} ending in ••••{last4}', [
-            'cardType' => $apiResponse->getCard()->getCardBrand(),
-            'last4' => $apiResponse->getCard()->getLast4(),
-        ]);
+        /** @var \Square\Models\CreateCustomerCardResponse $result */
+        $result = $apiResponse->getResult();
+        $card = $result->getCard();
 
         $paymentSource = new PaymentSource();
         $paymentSource->userId = $userId;
         $paymentSource->gatewayId = $this->id;
-        $paymentSource->token = $apiResponse->getCard()->getId();
-        $paymentSource->response = $apiResponse;
-        $paymentSource->description = $description;
+        $paymentSource->token = $card->getId();
+        $paymentSource->response = $result;
+        $paymentSource->description = Craft::t(
+            'square',
+            '{cardType} ending in ••••{last4}',
+            [
+                'cardType' => $card->getCardBrand(),
+                'last4' => $card->getLast4(),
+            ]
+        );
 
         return $paymentSource;
     }
@@ -310,47 +292,56 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param array $params
+     * @param array $userParams
      *
      * @return string|null
+     * @throws \Throwable
      * @throws \Twig\Error\LoaderError
      * @throws \Twig\Error\RuntimeError
      * @throws \Twig\Error\SyntaxError
+     * @throws \craft\errors\ElementNotFoundException
      * @throws \yii\base\Exception
      * @throws \yii\base\InvalidConfigException
-     * @throws \Throwable
      */
-    public function getPaymentFormHtml(array $params): ?string
+    public function getPaymentFormHtml(array $userParams = []): ?string
     {
-        $params = array_replace_recursive(
-            [
-                'containerClass' => 'square-payment-form',
-                'errorClass' => 'square-payment-form-errors',
-                'paymentForm' => [
-                    'autoBuild' => false,
-                    'inputClass' => 'sq-input',
-                    'cardNumber' => [
-                        'elementId' => 'sq-card-number',
-                    ],
-                    'cvv' => [
-                        'elementId' => 'sq-cvv',
-                    ],
-                    'expirationDate' => [
-                        'elementId' => 'sq-expiration-date',
-                    ],
-                    'postalCode' => [
-                        'elementId' => 'sq-postal-code',
-                    ],
+        $intent = ArrayHelper::getValue($userParams, 'intent', 'CHARGE');
+
+        $order = Commerce::getInstance()
+            ->getCarts()
+            ->getCart();
+
+        $params = [
+            'paymentForm' => [
+                'applicationId' => $this->getApplicationId(),
+                'locationId' => $this->getLocationId(),
+                'autoBuild' => false,
+                'inputClass' => 'sq-input',
+                'cardNumber' => [
+                    'elementId' => 'sq-cardNumber',
+                    'placeholder' => Craft::t('square', 'Card Number'),
+                ],
+                'cvv' => [
+                    'elementId' => 'sq-cvv',
+                    'placeholder' => Craft::t('square', 'CVV'),
+                ],
+                'expirationDate' => [
+                    'elementId' => 'sq-expirationDate',
+                    'placeholder' => Craft::t('square', 'MM/YY'),
+                ],
+                'postalCode' => [
+                    'elementId' => 'sq-postalCode',
+                    'placeholder' => Craft::t('square', 'Postal'),
                 ],
             ],
-            $params,
-            [
-                'paymentForm' => [
-                    'applicationId' => $this->getApplicationId(),
-                    'locationId' => $this->getLocationId(),
-                ],
-            ]
-        );
+
+            'initialPostalCode' => $this->getBillingAddressZipCode($order),
+
+            'verificationDetails' => $this->getVerificationDetails(
+                $intent,
+                $order
+            ),
+        ];
 
         $view = Craft::$app->getView();
 
@@ -397,62 +388,6 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param \craft\commerce\elements\Order $order
-     * @param \craft\elements\User|null      $user
-     *
-     * @return array
-     */
-    public function getVerificationDetails(
-        Order $order,
-        User $user = null
-    ): array {
-        $verificationDetails = [];
-
-        if ($order) {
-            $verificationDetails['amount'] = number_format(
-                $order->getTotalPrice(),
-                2
-            );
-            $verificationDetails['currency'] = $order->paymentCurrency;
-        }
-
-        $customers = Commerce::getInstance()->getCustomers();
-
-        if ($user !== null) {
-            $customer = $customers->getCustomerByUserId($user->id);
-        } else {
-            $customer = $customers->getCustomer();
-        }
-
-        if (
-            $customer !== null &&
-            ($address = $customer->getPrimaryBillingAddress())
-        ) {
-            $verificationDetails['billingContact']['givenName'] =
-                $address->firstName ?? $user->firstName;
-            $verificationDetails['billingContact']['familyName'] =
-                $address->lastName ?? $user->lastName;
-
-            $verificationDetails['billingContact'][
-                'addressLines'
-            ] = array_filter([
-                $address->address1,
-                $address->address2,
-                $address->address3,
-            ]);
-
-            $verificationDetails['billingContact']['city'] = $address->city;
-            $verificationDetails['billingContact']['postalCode'] =
-                $address->zipCode;
-            $verificationDetails['billingContact'][
-                'country'
-            ] = $address->getCountry()->iso;
-        }
-
-        return $verificationDetails;
-    }
-
-    /**
      * @param array $params
      *
      * @return string|null
@@ -479,6 +414,7 @@ class SquareGateway extends Gateway
      * @param \craft\commerce\models\payments\BasePaymentForm $form
      *
      * @return \craft\commerce\base\RequestResponseInterface
+     * @throws \Square\Exceptions\ApiException
      */
     public function purchase(
         Transaction $transaction,
@@ -491,6 +427,7 @@ class SquareGateway extends Gateway
      * @param \craft\commerce\models\Transaction $transaction
      *
      * @return \craft\commerce\base\RequestResponseInterface
+     * @throws \Square\Exceptions\ApiException
      */
     public function refund(Transaction $transaction): RequestResponseInterface
     {
@@ -505,14 +442,14 @@ class SquareGateway extends Gateway
         );
         $body->setReason($transaction->message);
 
-        try {
-            $refundsApi = $this->getSquareClient()->getRefundsApi();
-            $apiResponse = $refundsApi->refundPayment($body);
+        $refundsApi = $this->getSquareClient()->getRefundsApi();
+        $apiResponse = $refundsApi->refundPayment($body);
 
-            return new SquareRequestResponse($apiResponse);
-        } catch (ApiException $exception) {
-            return new SquareRequestResponse($exception);
+        if ($apiResponse->isError()) {
+            return new SquareErrorResponse($apiResponse->getErrors());
         }
+
+        return new SquareResponse($apiResponse->getResult());
     }
 
     /**
@@ -594,13 +531,14 @@ class SquareGateway extends Gateway
      * @param bool                                            $autocomplete
      *
      * @return \craft\commerce\base\RequestResponseInterface
+     * @throws \Square\Exceptions\ApiException
      */
     protected function authorizeOrPurchase(
         Transaction $transaction,
         BasePaymentForm $paymentForm,
         bool $autocomplete = true
     ): RequestResponseInterface {
-        /** @var \craft\commerce\square\models\SquarePaymentForm $paymentForm */
+        /** @var SquarePaymentForm $paymentForm */
 
         $sourceId = $paymentForm->nonce;
         $idempotencyKey = $transaction->hash;
@@ -616,14 +554,14 @@ class SquareGateway extends Gateway
         $body->setLocationId($this->getLocationId());
         $body->setVerificationToken($paymentForm->verificationToken);
 
-        try {
-            $paymentsApi = $this->getSquareClient()->getPaymentsApi();
-            $apiResponse = $paymentsApi->createPayment($body);
+        $paymentsApi = $this->getSquareClient()->getPaymentsApi();
+        $apiResponse = $paymentsApi->createPayment($body);
 
-            return new SquareRequestResponse($apiResponse);
-        } catch (ApiException $exception) {
-            return new SquareRequestResponse($exception);
+        if ($apiResponse->isError()) {
+            return new SquareErrorResponse($apiResponse->getErrors());
         }
+
+        return new SquareResponse($apiResponse->getResult());
     }
 
     /**
@@ -655,39 +593,46 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param \craft\elements\User $user
+     * @param \craft\commerce\elements\Order $order
      *
-     * @return array
+     * @return string|null
      */
-    protected function getBillingContactForUser(User $user): array
+    protected function getBillingAddressZipCode(Order $order): ?string
     {
-        // todo: Remove unused method (?)
-
-        $billingContact = [];
-
-        $customer = Commerce::getInstance()
-            ->getCustomers()
-            ->getCustomerByUserId($user->id);
-
-        if ($customer && ($address = $customer->getPrimaryBillingAddress())) {
-            $billingContact = array_merge($billingContact, [
-                'givenName' => $address->firstName,
-                'familyName' => $address->lastName,
-                'addressLines' => array_filter([
-                    $address->address1,
-                    $address->address2,
-                    $address->address3,
-                ]),
-                'city' => $address->city,
-                'postalCode' => $address->zipCode,
-                'country' => $address->getCountry()->iso,
-            ]);
+        if (
+            $order &&
+            ($address = $order->getBillingAddress()) &&
+            $address->zipCode
+        ) {
+            return $address->zipCode;
         }
 
-        return array_merge($billingContact, [
-            'givenName' => $user->firstName,
-            'familyName' => $user->lastName,
-        ]);
+        return null;
+    }
+
+    /**
+     * @param \craft\commerce\models\Address $address
+     *
+     * @return array|null
+     */
+    protected function getBillingContactForAddress(Address $address): ?array
+    {
+        if ($address === null) {
+            return null;
+        }
+
+        return [
+            'givenName' => $address->firstName,
+            'familyName' => $address->lastName,
+            'addressLines' => array_filter([
+                $address->address1,
+                $address->address2,
+                $address->address3,
+            ]),
+            'city' => $address->city,
+            'postalCode' => $address->zipCode,
+            'country' => $address->getCountry()->iso,
+        ];
     }
 
     /**
@@ -713,5 +658,45 @@ class SquareGateway extends Gateway
                 ? Environment::SANDBOX
                 : Environment::PRODUCTION,
         ]);
+    }
+
+    /**
+     * @param string                         $intent
+     * @param \craft\commerce\elements\Order $order
+     *
+     * @return array|null
+     */
+    protected function getVerificationDetails(
+        string $intent,
+        Order $order
+    ): ?array {
+        if ($order === null) {
+            return null;
+        }
+
+        $verificationDetails = [
+            'intent' => $intent,
+        ];
+
+        if ($intent === 'CHARGE') {
+            $verificationDetails['currencyCode'] = $order->paymentCurrency;
+            $verificationDetails[
+                'amount'
+            ] = Craft::$app
+                ->getFormatter()
+                ->asDecimal($order->getTotalPrice(), 2);
+        }
+
+        $address = $order->getBillingAddress();
+
+        if ($address === null) {
+            return $verificationDetails;
+        }
+
+        $verificationDetails[
+            'billingContact'
+        ] = $this->getBillingContactForAddress($address);
+
+        return $verificationDetails;
     }
 }

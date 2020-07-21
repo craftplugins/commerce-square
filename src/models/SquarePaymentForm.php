@@ -1,6 +1,6 @@
 <?php
 
-namespace craft\commerce\square\models;
+namespace craftplugins\square\models;
 
 use craft\commerce\models\payments\CreditCardPaymentForm;
 use craft\commerce\models\PaymentSource;
@@ -55,8 +55,10 @@ class SquarePaymentForm extends CreditCardPaymentForm
     /**
      * @param \craft\commerce\models\PaymentSource $paymentSource
      *
+     * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
-     * @throws \craftplugins\square\errors\SquareCustomerException
+     * @throws \craftplugins\square\errors\SquareApiErrorException
+     * @throws \craftplugins\square\errors\SquareException
      * @throws \yii\base\InvalidConfigException
      */
     public function populateFromPaymentSource(

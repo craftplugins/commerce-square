@@ -5,7 +5,7 @@ namespace craftplugins\square\services;
 use craft\base\Component;
 use craft\db\Query;
 use craft\errors\ElementNotFoundException;
-use craftplugins\square\errors\SquareCustomerException;
+use craftplugins\square\errors\SquareException;
 use craftplugins\square\gateways\SquareGateway;
 use craftplugins\square\models\SquareCustomer;
 use craftplugins\square\records\SquareCustomerRecord;
@@ -50,21 +50,23 @@ class SquareCustomers extends Component
      * @param int                                         $userId
      *
      * @return \craftplugins\square\models\SquareCustomer
+     * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
-     * @throws \craftplugins\square\errors\SquareCustomerException
+     * @throws \craftplugins\square\errors\SquareApiErrorException
+     * @throws \craftplugins\square\errors\SquareException
      */
     public function getOrCreateSquareCustomer(
         SquareGateway $gateway,
         int $userId
     ): SquareCustomer {
-        if ($squareCustomer = $this->getSquareCustomer($gateway, $userId)) {
-            return $squareCustomer;
-        }
+        $squareCustomer = $this->getSquareCustomer($gateway, $userId);
 
-        $squareCustomer = $gateway->createCustomer($userId);
+        if ($squareCustomer === null) {
+            $squareCustomer = $gateway->createCustomer($userId);
 
-        if (!$this->saveSquareCustomer($squareCustomer)) {
-            throw new SquareCustomerException('Error saving Square Customer');
+            if (!$this->saveSquareCustomer($squareCustomer)) {
+                throw new SquareException('Error saving Square Customer');
+            }
         }
 
         return $squareCustomer;
@@ -115,7 +117,7 @@ class SquareCustomers extends Component
             $record = new SquareCustomerRecord();
         }
 
-        $record->userId = $customer->userId;
+        $record->userId = (string) $customer->userId;
         $record->gatewayId = $customer->gatewayId;
         $record->reference = $customer->reference;
         $record->response = $customer->response;

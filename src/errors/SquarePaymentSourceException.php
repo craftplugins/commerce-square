@@ -3,11 +3,11 @@
 namespace craftplugins\square\errors;
 
 /**
- * Class SquareCustomerException
+ * Class SquarePaymentSourceException
  *
  * @package craftplugins\square\errors
  * @deprecated
  */
-class SquareCustomerException extends SquareException
+class SquarePaymentSourceException extends SquareException
 {
 }

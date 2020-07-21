@@ -2,11 +2,13 @@
 
 namespace craftplugins\square\errors;
 
+use yii\base\Exception;
+
 /**
- * Class PaymentSourceException
+ * Class SquareException
  *
  * @package craftplugins\square\errors
  */
-class PaymentSourceException extends Exception
+class SquareException extends Exception
 {
 }

@@ -11,36 +11,16 @@ use yii\db\ActiveQueryInterface;
  * Class SquareCustomerRecord
  *
  * @package craftplugins\square\records
+ * @property string                       $gatewayId
+ * @property int                          $id
+ * @property string                       $reference
+ * @property mixed                        $response
+ * @property string                       $userId
  * @property \yii\db\ActiveQueryInterface $user
  * @property \yii\db\ActiveQueryInterface $gateway
  */
 class SquareCustomerRecord extends ActiveRecord
 {
-    /**
-     * @var string
-     */
-    public $gatewayId;
-
-    /**
-     * @var int
-     */
-    public $id;
-
-    /**
-     * @var string
-     */
-    public $reference;
-
-    /**
-     * @var mixed
-     */
-    public $response;
-
-    /**
-     * @var string
-     */
-    public $userId;
-
     /**
      * @return string
      */

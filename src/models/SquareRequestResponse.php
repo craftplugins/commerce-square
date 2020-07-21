@@ -1,19 +1,18 @@
 <?php
 
-namespace craft\commerce\square\models;
+namespace craftplugins\square\models;
 
 use craft\commerce\base\RequestResponseInterface;
 use craft\commerce\errors\NotImplementedException;
-use Square\Http\ApiResponse;
-use SquareConnect\ApiException;
-use SquareConnect\Model\CreatePaymentResponse;
-use SquareConnect\Model\RefundPaymentResponse;
-use SquareConnect\ObjectSerializer;
+use Square\Exceptions\ApiException;
+use Square\Models\CreatePaymentResponse;
+use Square\Models\RefundPaymentResponse;
 
 /**
  * Class SquareRequestResponse
  *
- * @package craft\commerce\square\models
+ * @package craftplugins\square\models
+ * @deprecated
  */
 class SquareRequestResponse implements RequestResponseInterface
 {
@@ -33,7 +32,7 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return string
      */
     public function getCode(): string
     {
@@ -45,37 +44,31 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return mixed|\Square\Http\HttpResponse|null
      */
     public function getData()
     {
         if ($this->response instanceof ApiException) {
-            return ObjectSerializer::sanitizeForSerialization(
-                $this->response->getResponseObject()
-            );
+            return $this->response->getHttpResponse();
         }
 
-        return ObjectSerializer::sanitizeForSerialization($this->response);
+        return $this->response;
     }
 
     /**
-     * @inheritDoc
+     * @return string
      */
     public function getMessage(): string
     {
         if ($this->response instanceof ApiException) {
-            $responseBody = $this->response->getResponseBody();
-
-            if (isset($responseBody->errors[0]->detail)) {
-                return $responseBody->errors[0]->detail;
-            }
+            return $this->response->getMessage();
         }
 
         return '';
     }
 
     /**
-     * @inheritDoc
+     * @return array
      */
     public function getRedirectData(): array
     {
@@ -83,7 +76,7 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return string
      */
     public function getRedirectMethod(): string
     {
@@ -91,7 +84,7 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return string
      */
     public function getRedirectUrl(): string
     {
@@ -99,7 +92,7 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return string
      */
     public function getTransactionReference(): string
     {
@@ -111,19 +104,19 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return bool
      */
     public function isProcessing(): bool
     {
         if ($this->response instanceof RefundPaymentResponse) {
-            return $this->response->getPayment()->getStatus() === 'PENDING';
+            return $this->response->getRefund()->getStatus() === 'PENDING';
         }
 
         return false;
     }
 
     /**
-     * @inheritDoc
+     * @return bool
      */
     public function isRedirect(): bool
     {
@@ -131,7 +124,7 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return bool
      */
     public function isSuccessful(): bool
     {
@@ -153,7 +146,7 @@ class SquareRequestResponse implements RequestResponseInterface
     }
 
     /**
-     * @inheritDoc
+     * @return mixed|void
      */
     public function redirect()
     {
