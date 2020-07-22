@@ -13,6 +13,7 @@ use craft\commerce\models\PaymentSource;
 use craft\commerce\models\Transaction;
 use craft\commerce\Plugin as Commerce;
 use craft\commerce\records\PaymentSource as PaymentSourceRecord;
+use craft\commerce\records\Transaction as TransactionRecord;
 use craft\elements\User;
 use craft\errors\ElementNotFoundException;
 use craft\events\ModelEvent;
@@ -20,9 +21,6 @@ use craft\helpers\ArrayHelper;
 use craft\web\Response as WebResponse;
 use craft\web\View;
 use craftplugins\square\errors\SquareApiErrorException;
-use craftplugins\square\errors\MethodNotSupportedException;
-use craftplugins\square\errors\SquareException;
-use craftplugins\square\errors\SquarePaymentSourceException;
 use craftplugins\square\models\SquareCustomer;
 use craftplugins\square\models\SquareErrorResponse;
 use craftplugins\square\models\SquarePaymentForm;
@@ -37,6 +35,7 @@ use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Models\RefundPaymentRequest;
 use Square\SquareClient;
+use Throwable;
 use yii\base\Event;
 
 /**
@@ -47,6 +46,11 @@ use yii\base\Event;
  */
 class SquareGateway extends Gateway
 {
+    /**
+     * The query parameter used to verify webhook requests
+     */
+    protected const WEBHOOK_TOKEN = 'sq-token';
+
     /**
      * @var string
      */
@@ -386,13 +390,41 @@ class SquareGateway extends Gateway
             ]);
     }
 
+    public function getWebhookUrl(array $params = []): string
+    {
+        $params[self::WEBHOOK_TOKEN] = $this->getWebhookToken();
+
+        return parent::getWebhookUrl($params);
+    }
+
     /**
      * @return \craft\web\Response
+     * @throws \craft\commerce\errors\TransactionException
+     * @throws \yii\base\Exception
+     * @throws \yii\base\InvalidConfigException
      */
     public function processWebHook(): WebResponse
     {
-        // todo: Implement processWebHook() method.
-        throw new NotImplementedException('processWebHook is not implemented');
+        $request = Craft::$app->getRequest();
+        $response = Craft::$app->getResponse();
+
+        $requestToken = $request->getQueryParam(self::WEBHOOK_TOKEN);
+        $webhookToken = $this->getWebhookToken();
+
+        if ($requestToken !== $webhookToken) {
+            $response->setStatusCode(403);
+            $response->data = 'Invalid token';
+
+            return $response;
+        }
+
+        if ($request->getBodyParam('type') === 'refund.updated') {
+            $this->processRefundUpdatedWebhook();
+        }
+
+        $response->data = 'ok';
+
+        return $response;
     }
 
     /**
@@ -683,5 +715,69 @@ class SquareGateway extends Gateway
         ] = $this->getBillingContactForAddress($address);
 
         return $verificationDetails;
+    }
+
+    /**
+     * @return string
+     * @throws \yii\base\Exception
+     * @throws \yii\base\InvalidConfigException
+     */
+    protected function getWebhookToken()
+    {
+        return Craft::$app->getSecurity()->hashData($this->id);
+    }
+
+    /**
+     * @throws \craft\commerce\errors\TransactionException
+     * @throws \yii\base\InvalidConfigException
+     */
+    protected function processRefundUpdatedWebhook(): void
+    {
+        $bodyParams = Craft::$app->getRequest()->getBodyParams();
+
+        // Get the refund object
+        $refund = $bodyParams['data']['object']['refund'];
+
+        // Get the currency from the returned currency code
+        $currency = Commerce::getInstance()
+            ->getCurrencies()
+            ->getCurrencyByIso($refund['amount_money']['currency']);
+
+        // Get correct amount based on minor unit
+        $amount =
+            $refund['amount_money']['amount'] / 10 ** $currency->minorUnit;
+
+        $transactions = Commerce::getInstance()->getTransactions();
+
+        // Find the main refund transaction
+        $parentTransaction = $transactions->getTransactionByReferenceAndStatus(
+            $refund['id'],
+            TransactionRecord::STATUS_PROCESSING
+        );
+
+        // Find any existing successfully transaction (avoid duplicates)
+        $childTransaction = $transactions->getTransactionByReferenceAndStatus(
+            $refund['id'],
+            TransactionRecord::STATUS_SUCCESS
+        );
+
+        if ($childTransaction || $refund['status'] !== 'COMPLETED') {
+            return;
+        }
+
+        // Create a new transaction to register the refund success
+        $childTransaction = $transactions->createTransaction(
+            null,
+            $parentTransaction
+        );
+
+        $childTransaction->code = '';
+        $childTransaction->amount = $amount;
+        $childTransaction->currency = (string) $currency;
+        $childTransaction->message = $refund['status'];
+        $childTransaction->response = $bodyParams;
+        $childTransaction->status = TransactionRecord::STATUS_SUCCESS;
+
+        $transactions->saveTransaction($childTransaction);
     }
 }
