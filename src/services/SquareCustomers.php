@@ -1,14 +1,14 @@
 <?php
 
-namespace craft\commerce\square\services;
+namespace craftplugins\square\services;
 
-use Craft;
 use craft\base\Component;
-use craft\commerce\square\gateways\SquareGateway;
-use craft\commerce\square\models\SquareCustomer;
-use craft\commerce\square\records\SquareCustomer as SquareCustomerRecord;
 use craft\db\Query;
 use craft\errors\ElementNotFoundException;
+use craftplugins\square\errors\SquareException;
+use craftplugins\square\gateways\SquareGateway;
+use craftplugins\square\models\SquareCustomer;
+use craftplugins\square\records\SquareCustomerRecord;
 
 /**
  * Class SquareCustomers
@@ -19,8 +19,8 @@ use craft\errors\ElementNotFoundException;
 class SquareCustomers extends Component
 {
     /**
-     * @param \craft\commerce\square\gateways\SquareGateway $gateway
-     * @param int                                           $userId
+     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param int                                         $userId
      *
      * @return bool
      * @throws \Throwable
@@ -46,37 +46,37 @@ class SquareCustomers extends Component
     }
 
     /**
-     * @param \craft\commerce\square\gateways\SquareGateway $gateway
-     * @param int                                           $userId
+     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param int                                         $userId
      *
-     * @return \craft\commerce\square\models\SquareCustomer
+     * @return \craftplugins\square\models\SquareCustomer
+     * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
+     * @throws \craftplugins\square\errors\SquareApiErrorException
+     * @throws \craftplugins\square\errors\SquareException
      */
     public function getOrCreateSquareCustomer(
         SquareGateway $gateway,
         int $userId
     ): SquareCustomer {
-        if ($squareCustomer = $this->getSquareCustomer($gateway, $userId)) {
-            return $squareCustomer;
-        }
+        $squareCustomer = $this->getSquareCustomer($gateway, $userId);
 
-        $squareCustomer = $gateway->createCustomer($userId);
+        if ($squareCustomer === null) {
+            $squareCustomer = $gateway->createCustomer($userId);
 
-        if (!$this->saveSquareCustomer($squareCustomer)) {
-            $errors = implode(', ', $squareCustomer->getErrorSummary(true));
-            Craft::error($errors, 'commerce-square');
-
-            return null;
+            if (!$this->saveSquareCustomer($squareCustomer)) {
+                throw new SquareException('Error saving Square Customer');
+            }
         }
 
         return $squareCustomer;
     }
 
     /**
-     * @param \craft\commerce\square\gateways\SquareGateway $gateway
-     * @param int                                           $userId
+     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param int                                         $userId
      *
-     * @return \craft\commerce\square\models\SquareCustomer|null
+     * @return \craftplugins\square\models\SquareCustomer|null
      */
     public function getSquareCustomer(
         SquareGateway $gateway,
@@ -98,7 +98,7 @@ class SquareCustomers extends Component
     }
 
     /**
-     * @param \craft\commerce\square\models\SquareCustomer $customer
+     * @param \craftplugins\square\models\SquareCustomer $customer
      *
      * @return bool
      * @throws \craft\errors\ElementNotFoundException
@@ -110,14 +110,14 @@ class SquareCustomers extends Component
 
             if (!$record) {
                 throw new ElementNotFoundException(
-                    "No Square Customer exists with the ID '{$customer->id}'"
+                    "Invalid Square Customer ID: {$customer->id}"
                 );
             }
         } else {
             $record = new SquareCustomerRecord();
         }
 
-        $record->userId = $customer->userId;
+        $record->userId = (string) $customer->userId;
         $record->gatewayId = $customer->gatewayId;
         $record->reference = $customer->reference;
         $record->response = $customer->response;

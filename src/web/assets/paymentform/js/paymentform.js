@@ -1,100 +1,89 @@
 /* global SqPaymentForm */
 
-function initSquare() {
-  if (typeof SqPaymentForm === 'undefined') {
-    return setTimeout(initSquare, 100)
-  }
+(function ($) {
+  $(".sq-form").each(function () {
+    var $container = $(this);
+    var $form = $container.closest("form");
+    var $nonce = $('[name="nonce"]', $container);
+    var $verificationToken = $('[name="verificationToken"]', $container);
 
-  function displayErrors($errors, errors) {
-    $errors.html(
-      '<ul>' + $.map(errors, function (error) {
-        return '<li>' + error + '</li>'
-      }) + '</ul>'
-    )
-  }
+    var params = $container.data("params");
+    var isProcessing = false;
 
-  function getFormData($form) {
-    return $form.serializeArray().reduce(function (object, item) {
-      object[item.name] = item.value
-      return object
-    }, {})
-  }
+    function updateErrorMessage(elementId, errorMessage) {
+      $("#" + elementId + " ~ .sq-error", $container).text(errorMessage);
+    }
 
-  $('[data-square]').each(function () {
-    var $container = $(this)
-
-    // Get the parameters from the data attribute
-    var params = $container.data('square')
-
-    // Generate an ID for the card element
-    var id = 'sq-card-' + Math.random().toString(36).substring(7)
-
-    // Create a card element and append it to the container
-    $('<div />').prop('id', id).appendTo($container)
-
-    // Get the form and relevant fields
-    var $form = $container.closest('form')
-    var $nonce = $form.find('[name="nonce"]')
-    var $verificationToken = $form.find('[name="verificationToken"]')
-
-    // Create and append an errors container
-    var $errors = $('<div />').addClass(params.errorClass).appendTo($container)
+    function displayErrors(errors) {
+      errors.forEach(function (error) {
+        if (error.type === "VALIDATION_ERROR") {
+          updateErrorMessage(
+            params.paymentForm[error.field].elementId,
+            error.message
+          );
+        }
+      });
+    }
 
     // Create the Square Payment Form instance
     // https://developer.squareup.com/docs/payment-form/payment-form-walkthrough
     // noinspection JSUnusedGlobalSymbols
     var paymentForm = new SqPaymentForm(
-      $.extend(params.square, {
-        autoBuild: false,
+      $.extend(params.paymentForm, {
         callbacks: {
+          paymentFormLoaded: function () {
+            paymentForm.setPostalCode(params.initialPostalCode);
+          },
           cardNonceResponseReceived: function (errors, nonce) {
             if (errors) {
-              $form.data('processing', false)
-              return displayErrors($errors, errors)
+              isProcessing = false;
+              return displayErrors(errors);
             }
 
-            $nonce.val(nonce)
+            $nonce.val(nonce);
 
             if (params.verificationDetails) {
               // Verification (SCA)
-              paymentForm.verifyBuyer(nonce, params.verificationDetails, function (errors, verificationResult) {
-                if (errors) {
-                  $form.data('processing', false)
-                  return displayErrors($errors, errors)
+              paymentForm.verifyBuyer(
+                nonce,
+                params.verificationDetails,
+                function (error, verificationResult) {
+                  if (error) {
+                    isProcessing = false;
+                    return $(".sq-form-error", $container).text(error.message);
+                  }
+
+                  $verificationToken.val(verificationResult.token);
+                  $form[0].submit();
                 }
-
-                $verificationToken.val(verificationResult.token)
-
-                $form[0].submit()
-              })
+              );
             } else {
               // Just submit the form if we’re not verifying
-              $form[0].submit()
+              $form[0].submit();
             }
-          }
+          },
+          inputEventReceived: function (inputEvent) {
+            if (inputEvent.eventType === "errorClassRemoved") {
+              updateErrorMessage(inputEvent.elementId, "");
+            }
+          },
         },
-        card: {
-          elementId: id
-        }
       })
-    )
+    );
+
+    // Remove already bound events
+    $form.off("submit");
 
     // Override the form submit event
-    $form.on('submit', function (event) {
-      event.preventDefault()
-
-      if ($form.data('processing')) {
-        return false
+    $form.on("submit", function (event) {
+      event.preventDefault();
+      if (!isProcessing) {
+        isProcessing = true;
+        paymentForm.requestCardNonce();
       }
-      $form.data('processing', true)
-
-      // Request a nonce from Square
-      paymentForm.requestCardNonce()
-    })
+    });
 
     // Render the Square Payment Form
-    paymentForm.build()
-  })
-}
-
-initSquare()
+    paymentForm.build();
+  });
+})(window.jQuery);

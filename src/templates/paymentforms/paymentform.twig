@@ -1,4 +1,23 @@
-<div class="{{ params.containerClass }}" data-square="{{ params|json_encode }}">
+<!-- Square Payment Form Start -->
+<div class="sq-form" data-params="{{ params|json_encode }}">
+  <div class="sq-field">
+    <div id="{{ params.paymentForm.cardNumber.elementId }}"></div>
+    <div class="sq-error"></div>
+  </div>
+  <div class="sq-field">
+    <div id="{{ params.paymentForm.expirationDate.elementId }}"></div>
+    <div class="sq-error"></div>
+  </div>
+  <div class="sq-field">
+    <div id="{{ params.paymentForm.cvv.elementId }}"></div>
+    <div class="sq-error"></div>
+  </div>
+  <div class="sq-field">
+    <div id="{{ params.paymentForm.postalCode.elementId }}"></div>
+    <div class="sq-error"></div>
+  </div>
   {{ hiddenInput('nonce') }}
   {{ hiddenInput('verificationToken') }}
+  <div class="sq-form-error"></div>
 </div>
+<!-- Square Payment Form End -->

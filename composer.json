@@ -1,9 +1,10 @@
 {
-  "name": "craftplugins/commerce-square",
-  "description": "Square payment gateway plugin for Craft Commerce 2",
+  "name": "craftplugins/square",
+  "description": "Square payment gateway plugin for Craft Commerce",
   "version": "0.1.0",
   "type": "craft-plugin",
   "keywords": [
+    "craftplugins",
     "commerce",
     "craftcms",
     "omnipay",
@@ -12,18 +13,18 @@
   "require": {
     "craftcms/cms": "^3.1.5",
     "craftcms/commerce": "^3.0",
-    "square/connect": "^2.20191120"
+    "square/square": "6.0.0.20200625"
   },
   "require-dev": {
     "roave/security-advisories": "dev-master"
   },
   "autoload": {
     "psr-4": {
-      "craft\\commerce\\square\\": "src/"
+      "craftplugins\\square\\": "src/"
     }
   },
   "extra": {
     "name": "Square for Craft Commerce",
-    "handle": "commerce-square"
+    "handle": "square"
   }
 }
