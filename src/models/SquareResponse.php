@@ -110,10 +110,7 @@ class SquareResponse extends AbstractSquareResponse
         }
 
         if ($this->result instanceof RefundPaymentResponse) {
-            return in_array($this->result->getRefund()->getStatus(), [
-                'PENDING',
-                'COMPLETED',
-            ]);
+            return $this->result->getRefund()->getStatus() === 'COMPLETED';
         }
 
         return false;
