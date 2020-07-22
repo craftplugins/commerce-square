@@ -6,6 +6,7 @@ use Craft;
 use craft\commerce\base\Gateway;
 use craft\commerce\base\RequestResponseInterface;
 use craft\commerce\elements\Order;
+use craft\commerce\errors\NotImplementedException;
 use craft\commerce\models\Address;
 use craft\commerce\models\payments\BasePaymentForm;
 use craft\commerce\models\PaymentSource;
@@ -137,24 +138,22 @@ class SquareGateway extends Gateway
      * @param \craft\commerce\models\Transaction $transaction
      *
      * @return \craft\commerce\base\RequestResponseInterface
-     * @throws \craftplugins\square\errors\MethodNotSupportedException
      */
     public function completeAuthorize(
         Transaction $transaction
     ): RequestResponseInterface {
-        throw new MethodNotSupportedException();
+        throw new NotImplementedException('completeAuthorize is not supported');
     }
 
     /**
      * @param \craft\commerce\models\Transaction $transaction
      *
      * @return \craft\commerce\base\RequestResponseInterface
-     * @throws \craftplugins\square\errors\MethodNotSupportedException
      */
     public function completePurchase(
         Transaction $transaction
     ): RequestResponseInterface {
-        throw new MethodNotSupportedException();
+        throw new NotImplementedException('completePurchase is not supported');
     }
 
     /**
@@ -364,7 +363,7 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @inheritDoc
+     * @return SquarePaymentForm
      */
     public function getPaymentFormModel(): BasePaymentForm
     {
@@ -388,25 +387,12 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param array $params
-     *
-     * @return string|null
-     * @throws \craftplugins\square\errors\MethodNotSupportedException
-     */
-    public function getVerificationFormHtml(array $params): ?string
-    {
-        // todo: Implement getVerificationFormHtml() method.
-        throw new MethodNotSupportedException();
-    }
-
-    /**
      * @return \craft\web\Response
-     * @throws \craftplugins\square\errors\MethodNotSupportedException
      */
     public function processWebHook(): WebResponse
     {
         // todo: Implement processWebHook() method.
-        throw new MethodNotSupportedException();
+        throw new NotImplementedException('processWebHook is not implemented');
     }
 
     /**
@@ -521,8 +507,7 @@ class SquareGateway extends Gateway
      */
     public function supportsWebhooks(): bool
     {
-        // todo: Switch to true when updating support
-        return false;
+        return true;
     }
 
     /**

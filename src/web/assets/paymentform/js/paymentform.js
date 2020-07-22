@@ -25,8 +25,6 @@
       });
     }
 
-    console.log(params);
-
     // Create the Square Payment Form instance
     // https://developer.squareup.com/docs/payment-form/payment-form-walkthrough
     // noinspection JSUnusedGlobalSymbols

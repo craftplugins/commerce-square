@@ -3,7 +3,6 @@
 namespace craftplugins\square\errors;
 
 use Square\Models\Error;
-use Throwable;
 
 /**
  * Class SquareApiErrorException
