@@ -319,7 +319,15 @@ class SquareGateway extends Gateway
                 'applicationId' => $this->getApplicationId(),
                 'locationId' => $this->getLocationId(),
                 'autoBuild' => false,
-                'inputClass' => 'sq-input',
+                'inputClass' => ArrayHelper::getValue(
+                    $userParams,
+                    'paymentForm.inputClass',
+                    'sq-input'
+                ),
+                'inputStyles' => ArrayHelper::getValue(
+                    $userParams,
+                    'paymentForm.inputStyles'
+                ),
                 'cardNumber' => [
                     'elementId' => 'sq-cardNumber',
                     'placeholder' => Craft::t('square', 'Card Number'),
