@@ -359,9 +359,14 @@ class SquareGateway extends Gateway
         $previousMode = $view->getTemplateMode();
         $view->setTemplateMode(View::TEMPLATE_MODE_CP);
 
-        $view->registerJsFile('https://js.squareupsandbox.com/v2/paymentform', [
-            'position' => View::POS_HEAD,
-        ]);
+        $view->registerJsFile(
+            $this->testMode
+                ? 'https://js.squareupsandbox.com/v2/paymentform'
+                : 'https://js.squareup.com/v2/paymentform',
+            [
+                'position' => View::POS_HEAD,
+            ]
+        );
 
         $view->registerAssetBundle(PaymentFormAsset::class);
 
