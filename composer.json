@@ -2,6 +2,7 @@
   "name": "craftplugins/square",
   "description": "Square payment gateway plugin for Craft Commerce",
   "type": "craft-plugin",
+  "license": "proprietary",
   "keywords": [
     "craftplugins",
     "commerce",
