@@ -1,6 +1,6 @@
 <?php
 
-namespace craftplugins\square\models;
+namespace augmentations\craft\commerce\square\models;
 
 use Square\Models\CompletePaymentResponse;
 use Square\Models\CreatePaymentResponse;

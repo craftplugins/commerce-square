@@ -1,6 +1,6 @@
 <?php
 
-namespace craftplugins\square\errors;
+namespace augmentations\craft\commerce\square\errors;
 
 use Square\Models\Error;
 

@@ -1,5 +1,5 @@
 {
-  "name": "craftplugins/square",
+  "name": "augmentations/craft-commerce-square",
   "description": "Square payment gateway plugin for Craft Commerce",
   "type": "craft-plugin",
   "license": "proprietary",
@@ -20,7 +20,7 @@
   },
   "autoload": {
     "psr-4": {
-      "craftplugins\\square\\": "src/"
+      "augmentations\\craft\\commerce\\square\\": "src/"
     }
   },
   "extra": {

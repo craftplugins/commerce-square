@@ -1,12 +1,12 @@
 <?php
 
-namespace craftplugins\square\models;
+namespace augmentations\craft\commerce\square\models;
 
+use augmentations\craft\commerce\square\gateways\SquareGateway;
+use augmentations\craft\commerce\square\records\SquareCustomerRecord as CustomerRecord;
 use Craft;
 use craft\base\Model;
 use craft\commerce\Plugin as Commerce;
-use craftplugins\square\gateways\SquareGateway;
-use craftplugins\square\records\SquareCustomerRecord as CustomerRecord;
 use craft\elements\User;
 
 /**
@@ -42,7 +42,7 @@ class SquareCustomer extends Model
     public $userId;
 
     /**
-     * @var \craftplugins\square\gateways\SquareGateway
+     * @var \augmentations\craft\commerce\square\gateways\SquareGateway
      */
     protected $gateway;
 
@@ -60,7 +60,7 @@ class SquareCustomer extends Model
     }
 
     /**
-     * @return \craftplugins\square\gateways\SquareGateway
+     * @return \augmentations\craft\commerce\square\gateways\SquareGateway
      */
     public function getGateway(): SquareGateway
     {

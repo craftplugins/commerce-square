@@ -1,6 +1,6 @@
 <?php
 
-namespace craftplugins\square\models;
+namespace augmentations\craft\commerce\square\models;
 
 use craft\commerce\base\RequestResponseInterface;
 use craft\commerce\errors\NotImplementedException;

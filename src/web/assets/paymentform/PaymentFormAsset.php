@@ -1,6 +1,6 @@
 <?php
 
-namespace craftplugins\square\web\assets;
+namespace augmentations\craft\commerce\square\web\assets;
 
 use craft\web\AssetBundle;
 use yii\web\JqueryAsset;

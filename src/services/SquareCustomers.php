@@ -1,14 +1,14 @@
 <?php
 
-namespace craftplugins\square\services;
+namespace augmentations\craft\commerce\square\services;
 
+use augmentations\craft\commerce\square\errors\SquareException;
+use augmentations\craft\commerce\square\gateways\SquareGateway;
+use augmentations\craft\commerce\square\models\SquareCustomer;
+use augmentations\craft\commerce\square\records\SquareCustomerRecord;
 use craft\base\Component;
 use craft\db\Query;
 use craft\errors\ElementNotFoundException;
-use craftplugins\square\errors\SquareException;
-use craftplugins\square\gateways\SquareGateway;
-use craftplugins\square\models\SquareCustomer;
-use craftplugins\square\records\SquareCustomerRecord;
 
 /**
  * Class SquareCustomers
@@ -19,7 +19,7 @@ use craftplugins\square\records\SquareCustomerRecord;
 class SquareCustomers extends Component
 {
     /**
-     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param \augmentations\craft\commerce\square\gateways\SquareGateway $gateway
      * @param int                                         $userId
      *
      * @return bool
@@ -46,14 +46,14 @@ class SquareCustomers extends Component
     }
 
     /**
-     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param \augmentations\craft\commerce\square\gateways\SquareGateway $gateway
      * @param int                                         $userId
      *
-     * @return \craftplugins\square\models\SquareCustomer
+     * @return \augmentations\craft\commerce\square\models\SquareCustomer
      * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
-     * @throws \craftplugins\square\errors\SquareApiErrorException
-     * @throws \craftplugins\square\errors\SquareException
+     * @throws \augmentations\craft\commerce\square\errors\SquareApiErrorException
+     * @throws \augmentations\craft\commerce\square\errors\SquareException
      */
     public function getOrCreateSquareCustomer(
         SquareGateway $gateway,
@@ -73,10 +73,10 @@ class SquareCustomers extends Component
     }
 
     /**
-     * @param \craftplugins\square\gateways\SquareGateway $gateway
+     * @param \augmentations\craft\commerce\square\gateways\SquareGateway $gateway
      * @param int                                         $userId
      *
-     * @return \craftplugins\square\models\SquareCustomer|null
+     * @return \augmentations\craft\commerce\square\models\SquareCustomer|null
      */
     public function getSquareCustomer(
         SquareGateway $gateway,
@@ -98,7 +98,7 @@ class SquareCustomers extends Component
     }
 
     /**
-     * @param \craftplugins\square\models\SquareCustomer $customer
+     * @param \augmentations\craft\commerce\square\models\SquareCustomer $customer
      *
      * @return bool
      * @throws \craft\errors\ElementNotFoundException

@@ -1,6 +1,6 @@
 <?php
 
-namespace craftplugins\square\migrations;
+namespace augmentations\craft\commerce\square\migrations;
 
 use craft\db\Migration;
 use craft\helpers\MigrationHelper;

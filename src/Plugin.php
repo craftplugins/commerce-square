@@ -1,17 +1,17 @@
 <?php
 
-namespace craftplugins\square;
+namespace augmentations\craft\commerce\square;
 
+use augmentations\craft\commerce\square\gateways\SquareGateway;
+use augmentations\craft\commerce\square\services\SquareCustomers;
 use craft\commerce\services\Gateways;
 use craft\events\RegisterComponentTypesEvent;
-use craftplugins\square\gateways\SquareGateway;
-use craftplugins\square\services\SquareCustomers;
 use yii\base\Event;
 
 /**
  * Class Plugin
  *
- * @package craftplugins\square
+ * @package augmentations\craft\commerce\square
  * @property \craftplugins\square\services\SquareCustomers $squareCustomers
  */
 class Plugin extends \craft\base\Plugin

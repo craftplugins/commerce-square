@@ -1,7 +1,14 @@
 <?php
 
-namespace craftplugins\square\gateways;
+namespace augmentations\craft\commerce\square\gateways;
 
+use augmentations\craft\commerce\square\errors\SquareApiErrorException;
+use augmentations\craft\commerce\square\models\SquareCustomer;
+use augmentations\craft\commerce\square\models\SquareErrorResponse;
+use augmentations\craft\commerce\square\models\SquarePaymentForm;
+use augmentations\craft\commerce\square\models\SquareResponse;
+use augmentations\craft\commerce\square\Plugin;
+use augmentations\craft\commerce\square\web\assets\PaymentFormAsset;
 use Craft;
 use craft\commerce\base\Gateway;
 use craft\commerce\base\RequestResponseInterface;
@@ -20,13 +27,6 @@ use craft\events\ModelEvent;
 use craft\helpers\ArrayHelper;
 use craft\web\Response as WebResponse;
 use craft\web\View;
-use craftplugins\square\errors\SquareApiErrorException;
-use craftplugins\square\models\SquareCustomer;
-use craftplugins\square\models\SquareErrorResponse;
-use craftplugins\square\models\SquarePaymentForm;
-use craftplugins\square\models\SquareResponse;
-use craftplugins\square\Plugin;
-use craftplugins\square\web\assets\PaymentFormAsset;
 use Square\Environment;
 use Square\Exceptions\ApiException;
 use Square\Models\CreateCustomerCardRequest;
@@ -35,7 +35,6 @@ use Square\Models\CreatePaymentRequest;
 use Square\Models\Money;
 use Square\Models\RefundPaymentRequest;
 use Square\SquareClient;
-use Throwable;
 use yii\base\Event;
 
 /**
@@ -163,10 +162,10 @@ class SquareGateway extends Gateway
     /**
      * @param int $userId
      *
-     * @return \craftplugins\square\models\SquareCustomer|null
+     * @return \augmentations\craft\commerce\square\models\SquareCustomer|null
      * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
-     * @throws \craftplugins\square\errors\SquareApiErrorException
+     * @throws \augmentations\craft\commerce\square\errors\SquareApiErrorException
      */
     public function createCustomer(int $userId): ?SquareCustomer
     {
@@ -208,8 +207,8 @@ class SquareGateway extends Gateway
      * @return \craft\commerce\models\PaymentSource
      * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
-     * @throws \craftplugins\square\errors\SquareApiErrorException
-     * @throws \craftplugins\square\errors\SquareException
+     * @throws \augmentations\craft\commerce\square\errors\SquareApiErrorException
+     * @throws \augmentations\craft\commerce\square\errors\SquareException
      * @throws \yii\base\InvalidConfigException
      */
     public function createPaymentSource(

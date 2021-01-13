@@ -1,10 +1,10 @@
 <?php
 
-namespace craftplugins\square\records;
+namespace augmentations\craft\commerce\square\records;
 
+use augmentations\craft\commerce\square\gateways\SquareGateway;
 use craft\db\ActiveRecord;
 use craft\elements\User;
-use craftplugins\square\gateways\SquareGateway;
 use yii\db\ActiveQueryInterface;
 
 /**
