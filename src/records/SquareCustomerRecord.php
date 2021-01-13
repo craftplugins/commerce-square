@@ -10,7 +10,7 @@ use yii\db\ActiveQueryInterface;
 /**
  * Class SquareCustomerRecord
  *
- * @package craftplugins\square\records
+ * @package augmentations\craft\commerce\square\records
  * @property string                       $gatewayId
  * @property int                          $id
  * @property string                       $reference

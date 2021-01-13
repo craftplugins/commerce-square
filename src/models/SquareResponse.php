@@ -9,7 +9,7 @@ use Square\Models\RefundPaymentResponse;
 /**
  * Class SquareResponse
  *
- * @package craftplugins\square\models
+ * @package augmentations\craft\commerce\square\models
  */
 class SquareResponse extends AbstractSquareResponse
 {

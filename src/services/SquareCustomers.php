@@ -13,8 +13,8 @@ use craft\errors\ElementNotFoundException;
 /**
  * Class SquareCustomers
  *
- * @package craft\commerce\square\services
- * @property \craft\db\Query $squareCustomerQuery
+ * @package augmentations\craft\commerce\square\services
+ * @property-read \craft\db\Query $squareCustomerQuery
  */
 class SquareCustomers extends Component
 {

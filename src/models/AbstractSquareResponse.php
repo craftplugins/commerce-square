@@ -8,7 +8,7 @@ use craft\commerce\errors\NotImplementedException;
 /**
  * Class AbstractSquareResponse
  *
- * @package craftplugins\square\models
+ * @package augmentations\craft\commerce\square\models
  */
 abstract class AbstractSquareResponse implements RequestResponseInterface
 {

@@ -7,7 +7,7 @@ use Square\Models\Error;
 /**
  * Class SquareApiErrorException
  *
- * @package craftplugins\square\errors
+ * @package augmentations\craft\commerce\square\errors
  */
 class SquareApiErrorException extends SquareException
 {

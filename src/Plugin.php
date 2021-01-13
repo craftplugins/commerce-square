@@ -12,16 +12,23 @@ use yii\base\Event;
  * Class Plugin
  *
  * @package augmentations\craft\commerce\square
- * @property \craftplugins\square\services\SquareCustomers $squareCustomers
+ * @property-read \augmentations\craft\commerce\square\services\SquareCustomers $squareCustomers
  */
 class Plugin extends \craft\base\Plugin
 {
+    /**
+     * @var self
+     */
+    public static $instance;
+
     /**
      * @inheritDoc
      */
     public function init(): void
     {
         parent::init();
+
+        self::$instance = $this;
 
         $this->setComponents([
             'customers' => SquareCustomers::class,
@@ -38,7 +45,7 @@ class Plugin extends \craft\base\Plugin
     }
 
     /**
-     * @return \craftplugins\square\services\SquareCustomers
+     * @return \augmentations\craft\commerce\square\services\SquareCustomers
      * @throws \yii\base\InvalidConfigException
      */
     public function getSquareCustomers(): SquareCustomers

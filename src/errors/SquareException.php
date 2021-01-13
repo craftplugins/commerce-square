@@ -7,7 +7,7 @@ use yii\base\Exception;
 /**
  * Class SquareException
  *
- * @package craftplugins\square\errors
+ * @package augmentations\craft\commerce\square\errors
  */
 class SquareException extends Exception
 {

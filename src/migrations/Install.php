@@ -8,7 +8,7 @@ use craft\helpers\MigrationHelper;
 /**
  * Class Install
  *
- * @package craftplugins\square\migrations
+ * @package augmentations\craft\commerce\square\migrations
  */
 class Install extends Migration
 {

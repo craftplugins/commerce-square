@@ -9,8 +9,8 @@ use craft\commerce\models\PaymentSource;
 /**
  * Class SquarePaymentForm
  *
- * @package craft\commerce\square\models
- * @property null|string $cardholderName
+ * @package augmentations\craft\commerce\square\models
+ * @property-read null|string $cardholderName
  */
 class SquarePaymentForm extends CreditCardPaymentForm
 {

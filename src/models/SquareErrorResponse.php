@@ -7,7 +7,7 @@ use Square\Models\Error;
 /**
  * Class SquareErrorResponse
  *
- * @package craftplugins\square\models
+ * @package augmentations\craft\commerce\square\models
  */
 class SquareErrorResponse extends AbstractSquareResponse
 {

@@ -12,7 +12,7 @@ use craft\elements\User;
 /**
  * Class SquareCustomer
  *
- * @package craftplugins\square\models
+ * @package augmentations\craft\commerce\square\models
  */
 class SquareCustomer extends Model
 {

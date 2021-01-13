@@ -8,7 +8,7 @@ use yii\web\JqueryAsset;
 /**
  * Class PaymentFormAsset
  *
- * @package craftplugins\square\web\assets
+ * @package augmentations\craft\commerce\square\web\assets
  */
 class PaymentFormAsset extends AssetBundle
 {
