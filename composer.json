@@ -7,7 +7,6 @@
     "craftplugins",
     "commerce",
     "craftcms",
-    "omnipay",
     "square"
   ],
   "require": {
