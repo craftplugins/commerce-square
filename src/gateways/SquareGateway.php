@@ -2,13 +2,13 @@
 
 namespace augmentations\craft\commerce\square\gateways;
 
+use augmentations\craft\commerce\square\assetbundles\paymentform\PaymentFormAsset;
 use augmentations\craft\commerce\square\errors\SquareApiErrorException;
 use augmentations\craft\commerce\square\models\SquareCustomer;
 use augmentations\craft\commerce\square\models\SquareErrorResponse;
 use augmentations\craft\commerce\square\models\SquarePaymentForm;
 use augmentations\craft\commerce\square\models\SquareResponse;
 use augmentations\craft\commerce\square\Plugin;
-use augmentations\craft\commerce\square\web\assets\PaymentFormAsset;
 use Craft;
 use craft\commerce\base\Gateway;
 use craft\commerce\base\RequestResponseInterface;

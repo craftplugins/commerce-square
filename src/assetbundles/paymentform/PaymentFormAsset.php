@@ -1,6 +1,6 @@
 <?php
 
-namespace augmentations\craft\commerce\square\web\assets;
+namespace augmentations\craft\commerce\square\assetbundles\paymentform;
 
 use craft\web\AssetBundle;
 use yii\web\JqueryAsset;
@@ -8,7 +8,7 @@ use yii\web\JqueryAsset;
 /**
  * Class PaymentFormAsset
  *
- * @package augmentations\craft\commerce\square\web\assets
+ * @package augmentations\craft\commerce\square\assetbundles\paymentform
  */
 class PaymentFormAsset extends AssetBundle
 {
