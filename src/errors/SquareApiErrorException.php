@@ -12,14 +12,19 @@ use Square\Models\Error;
 class SquareApiErrorException extends SquareException
 {
     /**
+     * @var Error[]
+     */
+    public $errors;
+
+    /**
      * SquareApiErrorException constructor.
      *
      * @param Error[] $errors
      */
     public function __construct(array $errors)
     {
-        parent::__construct(
-            "{$errors[0]->getCode()}: {$errors[0]->getDetail()}"
-        );
+        $this->errors = $errors;
+        
+        parent::__construct($errors[0]->getDetail());
     }
 }
