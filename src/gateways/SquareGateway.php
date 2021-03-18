@@ -43,7 +43,7 @@ use yii\base\Event;
  *
  * @package augmentations\craft\commerce\square\gateways
  * @property-read null|string $settingsHtml
- * @property-read string $webhookToken
+ * @property-read string      $webhookToken
  */
 class SquareGateway extends Gateway
 {
@@ -90,7 +90,7 @@ class SquareGateway extends Gateway
             /** @var User $user */
             $user = $event->sender;
 
-            Plugin::getInstance()
+            Plugin::$instance
                 ->getSquareCustomers()
                 ->deleteSquareCustomer($this, $user->id);
         });
@@ -105,8 +105,9 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param \craft\commerce\models\Transaction $transaction
+     * @param \craft\commerce\models\Transaction              $transaction
      * @param \craft\commerce\models\payments\BasePaymentForm $form
+     *
      * @return \craft\commerce\base\RequestResponseInterface
      * @throws \Square\Exceptions\ApiException
      */
@@ -120,7 +121,8 @@ class SquareGateway extends Gateway
 
     /**
      * @param \craft\commerce\models\Transaction $transaction
-     * @param string $reference
+     * @param string                             $reference
+     *
      * @return \craft\commerce\base\RequestResponseInterface
      * @throws \Square\Exceptions\ApiException
      */
@@ -145,6 +147,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param \craft\commerce\models\Transaction $transaction
+     *
      * @return \craft\commerce\base\RequestResponseInterface
      */
     public function completeAuthorize(
@@ -156,6 +159,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param \craft\commerce\models\Transaction $transaction
+     *
      * @return \craft\commerce\base\RequestResponseInterface
      */
     public function completePurchase(
@@ -167,10 +171,12 @@ class SquareGateway extends Gateway
 
     /**
      * @param int $userId
+     *
      * @return \augmentations\craft\commerce\square\models\SquareCustomer|null
      * @throws \Square\Exceptions\ApiException
-     * @throws \craft\errors\ElementNotFoundException
      * @throws \augmentations\craft\commerce\square\errors\SquareApiErrorException
+     * @throws \augmentations\craft\commerce\square\errors\SquareException
+     * @throws \craft\errors\ElementNotFoundException
      */
     public function createCustomer(int $userId): ?SquareCustomer
     {
@@ -213,11 +219,12 @@ class SquareGateway extends Gateway
     /**
      * @param \craft\commerce\models\payments\BasePaymentForm $sourceData
      * @param int                                             $userId
+     *
      * @return \craft\commerce\models\PaymentSource
      * @throws \Square\Exceptions\ApiException
-     * @throws \craft\errors\ElementNotFoundException
      * @throws \augmentations\craft\commerce\square\errors\SquareApiErrorException
      * @throws \augmentations\craft\commerce\square\errors\SquareException
+     * @throws \craft\errors\ElementNotFoundException
      * @throws \yii\base\InvalidConfigException
      */
     public function createPaymentSource(
@@ -281,6 +288,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param string $token
+     *
      * @return bool
      * @throws \yii\base\InvalidConfigException
      */
@@ -291,7 +299,7 @@ class SquareGateway extends Gateway
             ->where(['token' => $token])
             ->scalar();
 
-        $squareCustomer = Plugin::getInstance()
+        $squareCustomer = Plugin::$instance
             ->getSquareCustomers()
             ->getSquareCustomer($this, $userId);
 
@@ -316,6 +324,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param array $userParams
+     *
      * @return string|null
      * @throws \Throwable
      * @throws \Twig\Error\LoaderError
@@ -460,8 +469,9 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param \craft\commerce\models\Transaction $transaction
+     * @param \craft\commerce\models\Transaction              $transaction
      * @param \craft\commerce\models\payments\BasePaymentForm $form
+     *
      * @return \craft\commerce\base\RequestResponseInterface
      * @throws \Square\Exceptions\ApiException
      */
@@ -475,6 +485,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param \craft\commerce\models\Transaction $transaction
+     *
      * @return \craft\commerce\base\RequestResponseInterface
      * @throws \Square\Exceptions\ApiException
      */
@@ -578,9 +589,10 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param \craft\commerce\models\Transaction $transaction
+     * @param \craft\commerce\models\Transaction              $transaction
      * @param \craft\commerce\models\payments\BasePaymentForm $paymentForm
-     * @param bool $autocomplete
+     * @param bool                                            $autocomplete
+     *
      * @return \craft\commerce\base\RequestResponseInterface
      * @throws \Square\Exceptions\ApiException
      */
@@ -622,6 +634,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param \craft\commerce\models\Transaction $transaction
+     *
      * @return \Square\Models\Money
      */
     protected function getAmountMoney(Transaction $transaction): Money
@@ -649,6 +662,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param \craft\commerce\elements\Order $order
+     *
      * @return string|null
      */
     protected function getBillingAddressZipCode(Order $order): ?string
@@ -666,6 +680,7 @@ class SquareGateway extends Gateway
 
     /**
      * @param \craft\commerce\models\Address $address
+     *
      * @return array|null
      */
     protected function getBillingContactForAddress(Address $address): ?array
@@ -714,8 +729,9 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param string $intent
+     * @param string                         $intent
      * @param \craft\commerce\elements\Order $order
+     *
      * @return array|null
      */
     protected function getVerificationDetails(
@@ -805,7 +821,7 @@ class SquareGateway extends Gateway
 
         $childTransaction->code = '';
         $childTransaction->amount = $amount;
-        $childTransaction->currency = (string)$currency;
+        $childTransaction->currency = (string) $currency;
         $childTransaction->message = $refund['status'];
         $childTransaction->response = $bodyParams;
         $childTransaction->status = TransactionRecord::STATUS_SUCCESS;
