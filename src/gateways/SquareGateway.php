@@ -132,6 +132,10 @@ class SquareGateway extends Gateway
         $apiResponse = $paymentsApi->completePayment($reference);
 
         if ($apiResponse->isError()) {
+            foreach ($apiResponse->getErrors() as $error) {
+                $transaction->addError('', $error->getDetail());
+            }
+
             return new SquareErrorResponse($apiResponse->getErrors());
         }
 
@@ -233,6 +237,10 @@ class SquareGateway extends Gateway
         );
 
         if ($apiResponse->isError()) {
+            foreach ($apiResponse->getErrors() as $error) {
+                $sourceData->addError('', $error->getDetail());
+            }
+
             throw new SquareApiErrorException($apiResponse->getErrors());
         }
 
@@ -584,6 +592,10 @@ class SquareGateway extends Gateway
         $apiResponse = $paymentsApi->createPayment($body);
 
         if ($apiResponse->isError()) {
+            foreach ($apiResponse->getErrors() as $error) {
+                $paymentForm->addError('', $error->getDetail());
+            }
+
             return new SquareErrorResponse($apiResponse->getErrors());
         }
 
