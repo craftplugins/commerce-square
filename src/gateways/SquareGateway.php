@@ -194,6 +194,11 @@ class SquareGateway extends Gateway
 
         /** @var \Square\Models\CreateCustomerResponse $result */
         $result = $apiResponse->getResult();
+        $responseCustomer = $result->getCustomer();
+
+        if ($responseCustomer === null) {
+            throw new SquareException('No customer in response.');
+        }
 
         $squareCustomer = new SquareCustomer();
         $squareCustomer->response = $result;
@@ -205,8 +210,8 @@ class SquareGateway extends Gateway
     }
 
     /**
-     * @param \craft\commerce\models\payments\BasePaymentForm $paymentForm
-     * @param int $userId
+     * @param \craft\commerce\models\payments\BasePaymentForm $sourceData
+     * @param int                                             $userId
      * @return \craft\commerce\models\PaymentSource
      * @throws \Square\Exceptions\ApiException
      * @throws \craft\errors\ElementNotFoundException
@@ -215,20 +220,24 @@ class SquareGateway extends Gateway
      * @throws \yii\base\InvalidConfigException
      */
     public function createPaymentSource(
-        BasePaymentForm $paymentForm,
+        BasePaymentForm $sourceData,
         int $userId
     ): PaymentSource
     {
-        /** @var SquarePaymentForm $paymentForm */
+        /** @var SquarePaymentForm $sourceData */
 
         $user = Craft::$app->getUsers()->getUserById($userId);
 
-        $squareCustomer = Plugin::getInstance()
+        if ($user === null) {
+            throw new ElementNotFoundException("User not found: {$userId}");
+        }
+
+        $squareCustomer = Plugin::$instance
             ->getSquareCustomers()
             ->getOrCreateSquareCustomer($this, $user->id);
 
-        $body = new CreateCustomerCardRequest($paymentForm->nonce);
-        $body->setVerificationToken($paymentForm->verificationToken);
+        $body = new CreateCustomerCardRequest($sourceData->nonce);
+        $body->setVerificationToken($sourceData->verificationToken);
 
         $customersApi = $this->getSquareClient()->getCustomersApi();
         $apiResponse = $customersApi->createCustomerCard(
@@ -247,6 +256,10 @@ class SquareGateway extends Gateway
         /** @var \Square\Models\CreateCustomerCardResponse $result */
         $result = $apiResponse->getResult();
         $card = $result->getCard();
+
+        if ($card === null) {
+            throw new SquareException('Card missing from API response.');
+        }
 
         $paymentSource = new PaymentSource();
         $paymentSource->userId = $userId;
@@ -481,6 +494,10 @@ class SquareGateway extends Gateway
         $apiResponse = $refundsApi->refundPayment($body);
 
         if ($apiResponse->isError()) {
+            foreach ($apiResponse->getErrors() as $error) {
+                $transaction->addError('', $error->getDetail());
+            }
+
             return new SquareErrorResponse($apiResponse->getErrors());
         }
 
