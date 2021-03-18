@@ -1,5 +1,6 @@
 <!-- Square Payment Form Start -->
 <div class="sq-form" data-params="{{ params|json_encode }}">
+  <ul class="sq-form-error"></ul>
   <div class="sq-field">
     <div id="{{ params.paymentForm.cardNumber.elementId }}"></div>
     <div class="sq-error"></div>
@@ -18,6 +19,5 @@
   </div>
   {{ hiddenInput('nonce') }}
   {{ hiddenInput('verificationToken') }}
-  <ul class="sq-form-error"></ul>
 </div>
 <!-- Square Payment Form End -->
