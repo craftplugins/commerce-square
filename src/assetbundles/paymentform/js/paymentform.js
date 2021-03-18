@@ -4,25 +4,19 @@
   $(".sq-form").each(function () {
     var $container = $(this);
     var $form = $container.closest("form");
+    var $errors = $(".sq-form-error", $container).hide();
     var $nonce = $('[name="nonce"]', $container);
     var $verificationToken = $('[name="verificationToken"]', $container);
 
     var params = $container.data("params");
     var isProcessing = false;
 
-    function updateErrorMessage(elementId, errorMessage) {
-      $("#" + elementId + " ~ .sq-error", $container).text(errorMessage);
-    }
-
     function displayErrors(errors) {
-      errors.forEach(function (error) {
-        if (error.type === "VALIDATION_ERROR") {
-          updateErrorMessage(
-            params.paymentForm[error.field].elementId,
-            error.message
-          );
-        }
-      });
+      var errorHtml = "";
+      for (var i = 0; i < errors.length; i++) {
+        errorHtml += "<li> " + errors[i].message + " </li>";
+      }
+      $errors.show().html(errorHtml);
     }
 
     // Create the Square Payment Form instance
@@ -50,7 +44,7 @@
                 function (error, verificationResult) {
                   if (error) {
                     isProcessing = false;
-                    return $(".sq-form-error", $container).text(error.message);
+                    return displayErrors([error]);
                   }
 
                   $verificationToken.val(verificationResult.token);
@@ -64,7 +58,7 @@
           },
           inputEventReceived: function (inputEvent) {
             if (inputEvent.eventType === "errorClassRemoved") {
-              updateErrorMessage(inputEvent.elementId, "");
+              $errors.html("").hide();
             }
           },
         },
