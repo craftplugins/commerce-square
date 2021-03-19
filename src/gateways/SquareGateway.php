@@ -376,9 +376,13 @@ class SquareGateway extends Gateway
 
             'initialPostalCode' => $this->getBillingAddressZipCode($order),
 
-            'verificationDetails' => $this->getVerificationDetails(
-                $intent,
-                $order
+            'verificationDetails' => ArrayHelper::getValue(
+                $userParams,
+                'verificationDetails',
+                $this->getVerificationDetails(
+                    $intent,
+                    $order
+                )
             ),
         ];
 
