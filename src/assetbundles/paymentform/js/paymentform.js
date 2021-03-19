@@ -10,6 +10,9 @@
     var params = $container.data("params");
     var isProcessing = false;
 
+    // Remove already bound events
+    $form.off("submit");
+
     function updateErrorMessage(elementId, errorMessage) {
       $("#" + elementId + " ~ .sq-error", $container).text(errorMessage);
     }
@@ -33,6 +36,15 @@
         callbacks: {
           paymentFormLoaded: function () {
             paymentForm.setPostalCode(params.initialPostalCode);
+
+            // Override the form submit event
+            $form.on("submit", function (event) {
+              event.preventDefault();
+              if (!isProcessing) {
+                isProcessing = true;
+                paymentForm.requestCardNonce();
+              }
+            });
           },
           cardNonceResponseReceived: function (errors, nonce) {
             if (errors) {
@@ -70,18 +82,6 @@
         },
       })
     );
-
-    // Remove already bound events
-    $form.off("submit");
-
-    // Override the form submit event
-    $form.on("submit", function (event) {
-      event.preventDefault();
-      if (!isProcessing) {
-        isProcessing = true;
-        paymentForm.requestCardNonce();
-      }
-    });
 
     // Render the Square Payment Form
     paymentForm.build();
