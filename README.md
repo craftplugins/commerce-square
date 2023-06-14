@@ -5,10 +5,6 @@
 
 This plugin provides a [Square](https://square.com) integration for [Craft Commerce](https://craftcms.com/commerce).
 
-## ⚠️ Public Beta
-
-N.B. This plugin is only installable via Composer during the public beta. A Plugin Store licensing fee will apply to production releases.
-
 ## Installation
 
 You can install this plugin from the Plugin Store or with Composer.
