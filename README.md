@@ -1,7 +1,8 @@
-<h1 align="center">
-  <img src="src/icon.svg" alt="Icon" width="128">
-  <div>Square for Craft Commerce</div>
-</h1>
+> [!IMPORTANT]
+>
+> **This plugin is no longer maintained.**
+
+# Square for Craft Commerce
 
 This plugin provides a [Square](https://square.com) integration for [Craft Commerce](https://craftcms.com/commerce).
 
